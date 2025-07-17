@@ -1,0 +1,523 @@
+from flask import Blueprint, request, jsonify, session, send_file
+from flask_bcrypt import check_password_hash
+from datetime import datetime, timedelta, date
+from sqlalchemy import text, func, or_, and_
+import pandas as pd
+import io
+import secrets
+from sqlalchemy.dialects.postgresql import ARRAY  # Pastikan ini di-import
+
+from models import db, User, PasswordResetToken, Lansia, KesehatanLansia, KesejahteraanSosial, KeluargaPendamping, ADailyLiving, UpdateAge
+
+api = Blueprint('api', __name__)
+
+# Helper function to check if user is logged in
+def login_required(f):
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'message': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    decorated_function.__name__ = f.__name__
+    return decorated_function
+
+@api.before_request
+def before_request():
+    pass    
+
+# Authentication routes
+@api.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    
+    user = User.query.filter_by(username=username).first()
+    
+    if user and check_password_hash(user.password_hash, password):
+        session.permanent = True
+        session['user_id'] = user.id
+        session['username'] = user.username
+        session['role'] = user.role
+        
+        return jsonify({
+            'message': 'Login successful',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'role': user.role
+            }
+        })
+    
+    return jsonify({'message': 'Invalid credentials'}), 401
+
+@api.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'message': 'Logout successful'})
+
+@api.route('/check-auth', methods=['GET'])
+def check_auth():
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+        if user:
+            return jsonify({
+                'authenticated': True,
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'role': user.role
+                }
+            })
+    
+    return jsonify({'authenticated': False}), 401
+
+@api.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    data = request.get_json()
+    email = data.get('email')
+    
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({'message': 'Email not found'}), 404
+    
+    # Generate reset token
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now() + timedelta(hours=1)
+    
+    reset_token = PasswordResetToken(
+        user_id=user.id,
+        token=token,
+        expires_at=expires_at
+    )
+    db.session.add(reset_token)
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Password reset token generated',
+        'token': token  # Remove this in production
+    })
+
+# Data routes
+@api.route('/lansia', methods=['GET'])
+@login_required
+def get_lansia():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    search = request.args.get('search', '', type=str)
+    gender_filter = request.args.get('gender', '', type=str)
+    age_group_filter = request.args.get('age_group', '', type=str)
+    rw_filter = request.args.get('rw', '', type=str)
+    sort_by = request.args.get('sort_by', 'nama_lengkap', type=str)
+    sort_order = request.args.get('sort_order', 'asc', type=str)
+    
+    # Build query
+    query = Lansia.query
+    
+    # Apply search filter
+    if search:
+        search_filter = or_(
+            Lansia.nama_lengkap.ilike(f'%{search}%'),
+            Lansia.nik.ilike(f'%{search}%'),
+            Lansia.alamat_lengkap.ilike(f'%{search}%')
+        )
+        query = query.filter(search_filter)
+    
+    # Apply other filters
+    if gender_filter:
+        query = query.filter(Lansia.jenis_kelamin == gender_filter)
+    
+    if age_group_filter:
+        query = query.filter(Lansia.kelompok_usia == age_group_filter)
+    
+    if rw_filter:
+        query = query.filter(Lansia.rw == rw_filter)
+    
+    # Apply sorting
+    valid_sort_columns = ['nama_lengkap', 'nik', 'usia', 'jenis_kelamin', 'rt', 'rw', 'created_at']
+    if sort_by in valid_sort_columns:
+        column = getattr(Lansia, sort_by)
+        if sort_order.lower() == 'desc':
+            query = query.order_by(column.desc())
+        else:
+            query = query.order_by(column.asc())
+    
+    # Paginate results
+    lansia_list = query.paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    return jsonify({
+        'data': [{
+            'id': l.id,
+            'nama_lengkap': l.nama_lengkap,
+            'nik': l.nik,
+            'jenis_kelamin': l.jenis_kelamin,
+            'usia': l.usia,
+            'rt': l.rt,
+            'rw': l.rw,
+            'kelompok_usia': l.kelompok_usia,
+            'alamat_lengkap': l.alamat_lengkap,
+            'status_perkawinan': l.status_perkawinan,
+            'created_at': l.created_at.isoformat() if l.created_at else None
+        } for l in lansia_list.items],
+        'total': lansia_list.total,
+        'pages': lansia_list.pages,
+        'current_page': page,
+        'per_page': per_page
+    })
+
+@api.route('/lansia', methods=['POST'])
+@login_required
+def create_lansia():
+    data = request.get_json()
+    
+    # Calculate age from birth date
+    if data.get('tanggal_lahir'):
+        birth_date = datetime.strptime(data['tanggal_lahir'], '%Y-%m-%d').date()
+        age = (date.today() - birth_date).days // 365
+        data['usia'] = age
+        
+        # Determine age group
+        if age < 60:
+            data['kelompok_usia'] = 'Pra Lansia'
+        elif age < 70:
+            data['kelompok_usia'] = 'Lansia Muda'
+        elif age < 80:
+            data['kelompok_usia'] = 'Lansia Madya'
+        else:
+            data['kelompok_usia'] = 'Lansia Tua'
+    
+    try:
+        # Create main lansia record
+        lansia_data = {
+            'nama_lengkap': data.get('nama_lengkap'),
+            'nik': data.get('nik'),
+            'jenis_kelamin': data.get('jenis_kelamin'),
+            'tanggal_lahir': datetime.strptime(data['tanggal_lahir'], '%Y-%m-%d').date() if data.get('tanggal_lahir') else None,
+            'usia': data.get('usia'),
+            'kelompok_usia': data.get('kelompok_usia'),
+            'alamat_lengkap': data.get('alamat_lengkap'),
+            'rt': data.get('rt'),
+            'rw': data.get('rw'),
+            'status_perkawinan': data.get('status_perkawinan'),
+            'agama': data.get('agama'),
+            'pendidikan_terakhir': data.get('pendidikan_terakhir'),
+            'pekerjaan_terakhir': data.get('pekerjaan_terakhir'),
+            'sumber_penghasilan': data.get('sumber_penghasilan')
+        }
+        
+        lansia = Lansia(**lansia_data)
+        db.session.add(lansia)
+        db.session.flush()  # Get the ID without committing
+        
+        # Create health record if data exists
+        if any(data.get(key) for key in ['kondisi_kesehatan_umum', 'riwayat_penyakit_kronis', 'status_gizi']):
+            kesehatan = KesehatanLansia(
+                lansia_id=lansia.id,
+                kondisi_kesehatan_umum=data.get('kondisi_kesehatan_umum'),
+                riwayat_penyakit_kronis=data.get('riwayat_penyakit_kronis', []),
+                penggunaan_obat_rutin=data.get('penggunaan_obat_rutin'),
+                alat_bantu=','.join(data.get('alat_bantu', [])),
+                aktivitas_fisik=data.get('aktivitas_fisik'),
+                status_gizi=data.get('status_gizi'),
+                riwayat_imunisasi=data.get('riwayat_imunisasi')
+            )
+            db.session.add(kesehatan)
+        
+        # Create social welfare record if data exists
+        if any(data.get(key) for key in ['dukungan_keluarga', 'kondisi_rumah', 'kebutuhan_mendesak']):
+            kesejahteraan = KesejahteraanSosial(
+                lansia_id=lansia.id,
+                dukungan_keluarga=data.get('dukungan_keluarga'),
+                kondisi_rumah=data.get('kondisi_rumah'),
+                kebutuhan_mendesak=data.get('kebutuhan_mendesak', []),
+                hobi_minat=data.get('hobi_minat'),
+                kondisi_psikologis=data.get('kondisi_psikologis')
+            )
+            db.session.add(kesejahteraan)
+        
+        # Create family record if data exists
+        if data.get('nama_pendamping'):
+            keluarga = KeluargaPendamping(
+                lansia_id=lansia.id,
+                nama_pendamping=data.get('nama_pendamping'),
+                hubungan_dengan_lansia=data.get('hubungan_dengan_lansia'),
+                usia_pendamping=int(data.get('usia_pendamping')) if data.get('usia_pendamping') else None,
+                pendidikan_pendamping=data.get('pendidikan_pendamping'),
+                ketersediaan_waktu=data.get('ketersediaan_waktu'),
+                partisipasi_program_bkl=data.get('keterlibatan_kelompok'),
+                riwayat_partisipasi_bkl=data.get('riwayat_partisipasi')
+            )
+            db.session.add(keluarga)
+        
+        db.session.commit()
+        return jsonify({'message': 'Data lansia berhasil ditambahkan', 'id': lansia.id}), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Error: {str(e)}'}), 400
+
+@api.route('/lansia/<int:lansia_id>', methods=['GET'])
+@login_required
+def get_lansia_detail(lansia_id):
+    lansia = Lansia.query.get_or_404(lansia_id)
+    
+    # Get related data using relationships
+    kesehatan = lansia.kesehatan
+    kesejahteraan = lansia.kesejahteraan
+    keluarga = lansia.keluarga
+    daily_living = lansia.daily_living
+    
+    return jsonify({
+        'id': lansia.id,
+        'nama_lengkap': lansia.nama_lengkap,
+        'nik': lansia.nik,
+        'jenis_kelamin': lansia.jenis_kelamin,
+        'tanggal_lahir': lansia.tanggal_lahir.isoformat() if lansia.tanggal_lahir else None,
+        'usia': lansia.usia,
+        'kelompok_usia': lansia.kelompok_usia,
+        'alamat_lengkap': lansia.alamat_lengkap,
+        'rt': lansia.rt,
+        'rw': lansia.rw,
+        'status_perkawinan': lansia.status_perkawinan,
+        'agama': lansia.agama,
+        'pendidikan_terakhir': lansia.pendidikan_terakhir,
+        'pekerjaan_terakhir': lansia.pekerjaan_terakhir,
+        'sumber_penghasilan': lansia.sumber_penghasilan,
+        'kesehatan': {
+            'kondisi_kesehatan_umum': kesehatan.kondisi_kesehatan_umum if kesehatan else None,
+            'riwayat_penyakit_kronis': kesehatan.riwayat_penyakit_kronis if kesehatan else [],
+            'penggunaan_obat_rutin': kesehatan.penggunaan_obat_rutin if kesehatan else None,
+            'alat_bantu': kesehatan.alat_bantu.split(',') if kesehatan and kesehatan.alat_bantu else [],
+            'aktivitas_fisik': kesehatan.aktivitas_fisik if kesehatan else None,
+            'status_gizi': kesehatan.status_gizi if kesehatan else None,
+            'riwayat_imunisasi': kesehatan.riwayat_imunisasi if kesehatan else None,
+        } if kesehatan else None,
+        'kesejahteraan': {
+            'dukungan_keluarga': kesejahteraan.dukungan_keluarga if kesejahteraan else None,
+            'kondisi_rumah': kesejahteraan.kondisi_rumah if kesejahteraan else None,
+            'kebutuhan_mendesak': kesejahteraan.kebutuhan_mendesak if kesejahteraan else [],
+            'hobi_minat': kesejahteraan.hobi_minat if kesejahteraan else None,
+            'kondisi_psikologis': kesejahteraan.kondisi_psikologis if kesejahteraan else None,
+        } if kesejahteraan else None,
+        'keluarga': {
+            'nama_pendamping': keluarga.nama_pendamping if keluarga else None,
+            'hubungan_dengan_lansia': keluarga.hubungan_dengan_lansia if keluarga else None,
+            'usia_pendamping': keluarga.usia_pendamping if keluarga else None,
+            'pendidikan_pendamping': keluarga.pendidikan_pendamping if keluarga else None,
+            'ketersediaan_waktu': keluarga.ketersediaan_waktu if keluarga else None,
+            'partisipasi_program_bkl': keluarga.partisipasi_program_bkl if keluarga else None,
+            'riwayat_partisipasi_bkl': keluarga.riwayat_partisipasi_bkl if keluarga else None,
+        } if keluarga else None,
+        'daily_living': {
+            'bab': daily_living.bab if daily_living else None,
+            'bak': daily_living.bak if daily_living else None,
+            'membersihkan_diri': daily_living.membersihkan_diri if daily_living else None,
+            'toilet': daily_living.toilet if daily_living else None,
+            'makan': daily_living.makan if daily_living else None,
+            'pindah_tempat': daily_living.pindah_tempat if daily_living else None,
+            'mobilitas': daily_living.mobilitas if daily_living else None,
+            'berpakaian': daily_living.berpakaian if daily_living else None,
+            'naik_turun_tangga': daily_living.naik_turun_tangga if daily_living else None,
+            'total': daily_living.total if daily_living else None,
+        } if daily_living else None,
+        'created_at': lansia.created_at.isoformat() if lansia.created_at else None
+    })
+
+# Dashboard routes
+@api.route('/dashboard/demographics', methods=['GET'])
+@login_required
+def get_demographics():
+    total_lansia = Lansia.query.count()
+    
+    gender_stats = db.session.query(
+        Lansia.jenis_kelamin,
+        func.count(Lansia.id)
+    ).group_by(Lansia.jenis_kelamin).all()
+    
+    age_group_stats = db.session.query(
+        Lansia.kelompok_usia,
+        func.count(Lansia.id)
+    ).group_by(Lansia.kelompok_usia).all()
+    
+    location_stats = db.session.query(
+        Lansia.rt,
+        Lansia.rw,
+        func.count(Lansia.id)
+    ).group_by(Lansia.rt, Lansia.rw).all()
+    
+    return jsonify({
+        'total_lansia': total_lansia,
+        'by_gender': [{'gender': g[0], 'count': g[1]} for g in gender_stats],
+        'by_age_group': [{'group': a[0], 'count': a[1]} for a in age_group_stats],
+        'by_location': [{'rt': l[0], 'rw': l[1], 'count': l[2]} for l in location_stats]
+    })
+
+@api.route('/dashboard/health', methods=['GET'])
+@login_required
+def get_health_stats():
+    health_condition_stats = db.session.query(
+        KesehatanLansia.kondisi_kesehatan_umum,
+        func.count(KesehatanLansia.id)
+    ).group_by(KesehatanLansia.kondisi_kesehatan_umum).all()
+    
+    # Chronic diseases query
+    chronic_diseases = db.session.execute(
+        text("""
+        SELECT unnest(riwayat_penyakit_kronis) as disease, COUNT(*) as count
+        FROM kesehatan_lansia 
+        WHERE riwayat_penyakit_kronis IS NOT NULL
+        GROUP BY disease
+        ORDER BY count DESC
+        """)
+    ).fetchall()
+    
+    nutrition_stats = db.session.query(
+        KesehatanLansia.status_gizi,
+        func.count(KesehatanLansia.id)
+    ).group_by(KesehatanLansia.status_gizi).all()
+    
+    return jsonify({
+        'health_conditions': [{'condition': h[0], 'count': h[1]} for h in health_condition_stats if h[0]],
+        'chronic_diseases': [{'disease': d[0], 'count': d[1]} for d in chronic_diseases],
+        'nutrition_status': [{'status': n[0], 'count': n[1]} for n in nutrition_stats if n[0]]
+    })
+
+@api.route('/dashboard/social-welfare', methods=['GET'])
+@login_required
+def get_social_welfare_stats():
+    housing_stats = db.session.query(
+        KesejahteraanSosial.kondisi_rumah,
+        func.count(KesejahteraanSosial.id)
+    ).group_by(KesejahteraanSosial.kondisi_rumah).all()
+    
+    urgent_needs = db.session.execute(
+        text("""
+        SELECT unnest(kebutuhan_mendesak) as need, COUNT(*) as count
+        FROM kesejahteraan_sosial 
+        WHERE kebutuhan_mendesak IS NOT NULL
+        GROUP BY need
+        ORDER BY count DESC
+        """)
+    ).fetchall()
+    
+    return jsonify({
+        'housing_conditions': [{'condition': h[0], 'count': h[1]} for h in housing_stats if h[0]],
+        'urgent_needs': [{'need': u[0], 'count': u[1]} for u in urgent_needs]
+    })
+
+@api.route('/dashboard/needs-potential', methods=['GET'])
+@login_required
+def get_needs_potential():
+    participation_stats = db.session.query(
+        KeluargaPendamping.partisipasi_program_bkl,
+        func.count(KeluargaPendamping.id)
+    ).group_by(KeluargaPendamping.partisipasi_program_bkl).all()
+    
+    return jsonify({
+        'participation': [{'group': p[0], 'count': p[1]} for p in participation_stats if p[0]]
+    })
+
+@api.route('/dashboard/urgent-need-details/<need_type>', methods=['GET'])
+@login_required
+def get_urgent_need_details(need_type):
+    print(type(need_type))
+    print(f"Fetching urgent need details for: {need_type}")
+    try:
+        # Query to get lansia with specific urgent need using PostgreSQL array contains operator
+        query = (
+                Lansia.query
+                .join(KesejahteraanSosial)
+                .filter(KesejahteraanSosial.kebutuhan_mendesak.contains([need_type]))
+                .with_entities(
+                    Lansia.id,
+                    Lansia.nama_lengkap,
+                    Lansia.nik,
+                    Lansia.alamat_lengkap,
+                    Lansia.rt,
+                    Lansia.rw,
+                    KesejahteraanSosial.kebutuhan_mendesak
+                )
+                .all()
+            )
+        
+        result = []
+        for row in query:
+            result.append({
+                'id': row.id,
+                'nama_lengkap': row.nama_lengkap,
+                'nik': row.nik,
+                'alamat_lengkap': row.alamat_lengkap,
+                'rt': row.rt,
+                'rw': row.rw,
+                'kebutuhan': row.kebutuhan_mendesak or []
+            })
+        
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error in get_urgent_need_details: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/export-template', methods=['GET'])
+@login_required
+def export_template():
+    template_data = {
+        'Nama Lengkap': [''],
+        'NIK': [''],
+        'Jenis Kelamin': ['Laki-laki/Perempuan'],
+        'Tanggal Lahir': ['YYYY-MM-DD'],
+        'Alamat Lengkap': [''],
+        'RT': [''],
+        'RW': [''],
+        'Status Perkawinan': [''],
+        'Agama': [''],
+        'Pendidikan Terakhir': [''],
+        'Pekerjaan Terakhir': [''],
+        'Sumber Penghasilan': ['']
+    }
+    
+    df = pd.DataFrame(template_data)
+    
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Template Input Lansia', index=False)
+    
+    output.seek(0)
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='template_input_lansia.xlsx'
+    )
+
+# Get filter options for frontend
+@api.route('/filter-options', methods=['GET'])
+@login_required
+def get_filter_options():
+    # Get unique values for filters
+    genders = db.session.query(Lansia.jenis_kelamin).distinct().all()
+    age_groups = db.session.query(Lansia.kelompok_usia).distinct().all()
+    rws = db.session.query(Lansia.rw).distinct().all()
+    
+    return jsonify({
+        'genders': [g[0] for g in genders if g[0]],
+        'age_groups': [a[0] for a in age_groups if a[0]],
+        'rws': [r[0] for r in rws if r[0]]
+    })
+    
+# Get filter options for frontend
+@api.route('/density-map', methods=['GET'])
+def get_density_map_data():
+    # # Get data for density map
+    # data = {f'RW{i}': 10*i for i in range(1, 13)}
+    data = {f'RW{i}': 0 for i in range(1, 13)}
+    
+    for i in range(1, 13):
+        count = Lansia.query.filter(Lansia.rw == f'{i}'.zfill(2)).count()
+        data[f'RW{i}'] = count
+    
+    return jsonify(data)
+
