@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.hybrid import hybrid_property
 from datetime import datetime
-from sqlalchemy import String, func, extract, cast, Integer
+from sqlalchemy import String, func, extract, cast, Integer, case
 from sqlalchemy.dialects.postgresql import ARRAY
 
 db = SQLAlchemy()
@@ -25,11 +25,6 @@ class PasswordResetToken(db.Model):
     used = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
-class UpdateAge(db.Model):
-    __tablename__ = 'update_age'
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False)
-
 class Lansia(db.Model):
     __tablename__ = 'lansia'
     id = db.Column(db.Integer, primary_key=True)
@@ -37,9 +32,8 @@ class Lansia(db.Model):
     nik = db.Column(db.String(16), unique=True, nullable=False)
     jenis_kelamin = db.Column(db.String(10), nullable=False)
     tanggal_lahir = db.Column(db.Date)
-    usia = db.Column(db.Integer)
-    kelompok_usia = db.Column(db.String(50))
     alamat_lengkap = db.Column(db.Text)
+    koordinat = db.Column(db.String(50))
     rt = db.Column(db.String(10))
     rw = db.Column(db.String(10))
     status_perkawinan = db.Column(db.String(50))
@@ -47,8 +41,6 @@ class Lansia(db.Model):
     pendidikan_terakhir = db.Column(db.String(100))
     pekerjaan_terakhir = db.Column(db.String(100))
     sumber_penghasilan = db.Column(db.String(100))
-    created_at = db.Column(db.DateTime, default=datetime.now)
-    updated_at = db.Column(db.DateTime, default=datetime.now)
 
     # Relationships
     kesehatan = db.relationship('KesehatanLansia', backref='lansia', uselist=False, cascade='all, delete-orphan')
@@ -65,11 +57,35 @@ class Lansia(db.Model):
     @usia.expression
     def usia(cls, reference=func.now()):
         return extract('year', func.age(reference, cls.tanggal_lahir))
+    
+    @hybrid_property
+    def kelompokUsia(self):
+        usia = self.usia
+        if usia < 60:
+            return 'Belum Lansia'
+        elif 60 <= usia < 70:
+            return 'Lansia Muda'
+        elif 70 <= usia < 80:
+            return 'Lansia Madya'
+        else:
+            return 'Lansia Tua'
+        
+    @kelompokUsia.expression
+    def kelompokUsia(cls):
+        usia_expr = cls.usia
+        return case(
+                (usia_expr < 60, 'Belum Lansia'),
+                ((usia_expr >= 60) & (usia_expr < 70), 'Lansia Muda'),
+                ((usia_expr >= 70) & (usia_expr < 80), 'Lansia Madya'),
+                (usia_expr >= 80, "Lansia Tua"),
+                else_='Tidak Diketahui'  # ← tambahkan ini
+        )
+    
 
 class KesehatanLansia(db.Model):
     __tablename__ = 'kesehatan_lansia'
     id = db.Column(db.Integer, primary_key=True)
-    lansia_id = db.Column(db.Integer, db.ForeignKey('lansia.id'), nullable=False)
+    lansia_id = db.Column(db.Integer, db.ForeignKey('lansia.id', ondelete='CASCADE'), nullable=False)
     kondisi_kesehatan_umum = db.Column(db.String(100))
     riwayat_penyakit_kronis = db.Column(ARRAY(String))
     penggunaan_obat_rutin = db.Column(db.Text)
@@ -77,23 +93,21 @@ class KesehatanLansia(db.Model):
     aktivitas_fisik = db.Column(db.String(100))
     status_gizi = db.Column(db.String(50))
     riwayat_imunisasi = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.now)
 
 class KesejahteraanSosial(db.Model):
     __tablename__ = 'kesejahteraan_sosial'
     id = db.Column(db.Integer, primary_key=True)
-    lansia_id = db.Column(db.Integer, db.ForeignKey('lansia.id'), nullable=False)
+    lansia_id = db.Column(db.Integer, db.ForeignKey('lansia.id', ondelete='CASCADE'), nullable=False)
     dukungan_keluarga = db.Column(db.String(100))
     kondisi_rumah = db.Column(db.String(100))
     kebutuhan_mendesak = db.Column(ARRAY(String))
     hobi_minat = db.Column(db.Text)
     kondisi_psikologis = db.Column(db.String(100))
-    created_at = db.Column(db.DateTime, default=datetime.now)
 
 class KeluargaPendamping(db.Model):
     __tablename__ = 'keluarga_pendamping'
     id = db.Column(db.Integer, primary_key=True)
-    lansia_id = db.Column(db.Integer, db.ForeignKey('lansia.id'), nullable=False)
+    lansia_id = db.Column(db.Integer, db.ForeignKey('lansia.id', ondelete='CASCADE'), nullable=False)
     nama_pendamping = db.Column(db.String(255))
     hubungan_dengan_lansia = db.Column(db.String(100))
     tanggal_lahir_pendamping = db.Column(db.Date)
@@ -103,12 +117,11 @@ class KeluargaPendamping(db.Model):
     partisipasi_program_bkl = db.Column(db.String(100))
     riwayat_partisipasi_bkl = db.Column(db.Text)
     keterlibatan_data = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.now)
 
 class ADailyLiving(db.Model):
     __tablename__ = 'daily_living'
     id = db.Column(db.Integer, primary_key=True)
-    lansia_id = db.Column(db.Integer, db.ForeignKey('lansia.id'), nullable=False)
+    lansia_id = db.Column(db.Integer, db.ForeignKey('lansia.id', ondelete='CASCADE'), nullable=False)
     bab = db.Column(db.Integer)
     bak = db.Column(db.Integer)
     membersihkan_diri = db.Column(db.Integer)
@@ -119,4 +132,17 @@ class ADailyLiving(db.Model):
     berpakaian = db.Column(db.Integer)
     naik_turun_tangga = db.Column(db.Integer)
     total = db.Column(db.Integer)
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    
+    def calculate_total(self):
+        self.total = (
+            (self.bab or 0) +
+            (self.bak or 0) +
+            (self.membersihkan_diri or 0) +
+            (self.toilet or 0) +
+            (self.makan or 0) +
+            (self.pindah_tempat or 0) +
+            (self.mobilitas or 0) +
+            (self.berpakaian or 0) +
+            (self.naik_turun_tangga or 0)
+        )
+        return self.total

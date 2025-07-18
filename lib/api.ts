@@ -72,6 +72,23 @@ export const dataAPI = {
       body: JSON.stringify(data),
     }),
 
+  updateLansia: (id: number, data: any) =>
+    apiCall(`/api/lansia/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  deleteLansia: (id: number) =>
+    apiCall(`/api/lansia/${id}`, {
+      method: "DELETE",
+    }),
+
+  bulkDeleteLansia: (ids: number[]) =>
+    apiCall("/api/lansia/bulk-delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    }),
+
   getFilterOptions: () => apiCall("/api/filter-options"),
 
   getDemographics: () => apiCall("/api/dashboard/demographics"),

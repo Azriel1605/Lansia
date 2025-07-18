@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import  RWMap from "@/components/map"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -216,8 +215,7 @@ function DashboardContent() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <RWMap/>
-                    {/* {demographics?.by_location?.map((location: any, index: number) => (
+                    {demographics?.by_location?.map((location: any, index: number) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-2">
                           <MapPin className="h-4 w-4 text-gray-500" />
@@ -227,7 +225,7 @@ function DashboardContent() {
                         </div>
                         <Badge variant="secondary">{location.count} orang</Badge>
                       </div>
-                    ))} */}
+                    ))}
                   </div>
                 </CardContent>
               </Card>

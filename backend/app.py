@@ -1,16 +1,10 @@
-from flask import Flask, request, jsonify, send_file, session
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
-from datetime import datetime, timedelta, date
-import pandas as pd
-import io
-import os
-from sqlalchemy import text, func
-import secrets
-
+from flask_migrate import Migrate
 from config import Config
-from models import db, User, PasswordResetToken, UpdateAge, Lansia, KesehatanLansia, KesejahteraanSosial, KeluargaPendamping, ADailyLiving
+from models import db, User
+# from seed import db
 from api import api
 
 app = Flask(__name__)
@@ -20,6 +14,8 @@ app.config.from_object(Config)
 db.init_app(app)
 bcrypt = Bcrypt(app)
 CORS(app, origins=app.config['CORS_ORIGINS'], supports_credentials=app.config['CORS_SUPPORTS_CREDENTIALS'])
+
+migrate = Migrate(app, db)
 
 # Register blueprints
 app.register_blueprint(api, url_prefix='/api')
