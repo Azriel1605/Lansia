@@ -18,55 +18,57 @@ import RouteGuard from "@/components/route-guard"
 
 function InputDataContent() {
   const [formData, setFormData] = useState({
-    // Personal Data
+    // Personal Data (Lansia table)
     nama_lengkap: "",
     nik: "",
     jenis_kelamin: "",
-    tempat_lahir: "",
     tanggal_lahir: "",
     alamat_lengkap: "",
+    koordinat: "",
     rt: "",
     rw: "",
-    kelurahan: "",
-    kecamatan: "",
     status_perkawinan: "",
     agama: "",
     pendidikan_terakhir: "",
     pekerjaan_terakhir: "",
-    pekerjaan_saat_ini: "",
     sumber_penghasilan: "",
 
-    // Health Data
+    // Health Data (KesehatanLansia table)
     kondisi_kesehatan_umum: "",
     riwayat_penyakit_kronis: [] as string[],
     penggunaan_obat_rutin: "",
-    alat_bantu: [] as string[],
+    alat_bantu: "",
     aktivitas_fisik: "",
     status_gizi: "",
     riwayat_imunisasi: "",
 
-    // Social Welfare Data
+    // Social Welfare Data (KesejahteraanSosial table)
     dukungan_keluarga: "",
-    tinggal_dengan: "",
     kondisi_rumah: "",
-    aksesibilitas_rumah: "",
-    sanitasi_rumah: "",
     kebutuhan_mendesak: [] as string[],
     hobi_minat: "",
     kondisi_psikologis: "",
 
-    // Family Data
+    // Family Data (KeluargaPendamping table)
     nama_pendamping: "",
     hubungan_dengan_lansia: "",
-    usia_pendamping: "",
+    tanggal_lahir_pendamping: "",
     pendidikan_pendamping: "",
     ketersediaan_waktu: "",
+    partisipasi_program_bkl: "",
+    riwayat_partisipasi_bkl: "",
+    keterlibatan_data: "",
 
-    // BKL Participation
-    riwayat_partisipasi: "",
-    jenis_kegiatan: [] as string[],
-    frekuensi_kegiatan: "",
-    keterlibatan_kelompok: "",
+    // Daily Living Activities (ADailyLiving table)
+    bab: 0,
+    bak: 0,
+    membersihkan_diri: 0,
+    toilet: 0,
+    makan: 0,
+    pindah_tempat: 0,
+    mobilitas: 0,
+    berpakaian: 0,
+    naik_turun_tangga: 0,
   })
 
   const [message, setMessage] = useState("")
@@ -102,49 +104,7 @@ function InputDataContent() {
 
       if (response.ok) {
         setMessage("Data lansia berhasil ditambahkan!")
-        // Reset form
-        setFormData({
-          nama_lengkap: "",
-          nik: "",
-          jenis_kelamin: "",
-          tempat_lahir: "",
-          tanggal_lahir: "",
-          alamat_lengkap: "",
-          rt: "",
-          rw: "",
-          kelurahan: "",
-          kecamatan: "",
-          status_perkawinan: "",
-          agama: "",
-          pendidikan_terakhir: "",
-          pekerjaan_terakhir: "",
-          pekerjaan_saat_ini: "",
-          sumber_penghasilan: "",
-          kondisi_kesehatan_umum: "",
-          riwayat_penyakit_kronis: [],
-          penggunaan_obat_rutin: "",
-          alat_bantu: [],
-          aktivitas_fisik: "",
-          status_gizi: "",
-          riwayat_imunisasi: "",
-          dukungan_keluarga: "",
-          tinggal_dengan: "",
-          kondisi_rumah: "",
-          aksesibilitas_rumah: "",
-          sanitasi_rumah: "",
-          kebutuhan_mendesak: [],
-          hobi_minat: "",
-          kondisi_psikologis: "",
-          nama_pendamping: "",
-          hubungan_dengan_lansia: "",
-          usia_pendamping: "",
-          pendidikan_pendamping: "",
-          ketersediaan_waktu: "",
-          riwayat_partisipasi: "",
-          jenis_kegiatan: [],
-          frekuensi_kegiatan: "",
-          keterlibatan_kelompok: "",
-        })
+        resetForm()
       } else {
         setError(data.message || "Terjadi kesalahan saat menyimpan data")
       }
@@ -207,6 +167,11 @@ function InputDataContent() {
       if (response.ok) {
         setMessage(`Berhasil mengupload ${data.count} data lansia`)
         setUploadFile(null)
+        // Reset file input
+        const fileInput = document.getElementById("file-upload") as HTMLInputElement
+        if (fileInput) {
+          fileInput.value = ""
+        }
       } else {
         setError(data.message || "Terjadi kesalahan saat mengupload file")
       }
@@ -215,6 +180,53 @@ function InputDataContent() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const resetForm = () => {
+    setFormData({
+      nama_lengkap: "",
+      nik: "",
+      jenis_kelamin: "",
+      tanggal_lahir: "",
+      alamat_lengkap: "",
+      koordinat: "",
+      rt: "",
+      rw: "",
+      status_perkawinan: "",
+      agama: "",
+      pendidikan_terakhir: "",
+      pekerjaan_terakhir: "",
+      sumber_penghasilan: "",
+      kondisi_kesehatan_umum: "",
+      riwayat_penyakit_kronis: [],
+      penggunaan_obat_rutin: "",
+      alat_bantu: "",
+      aktivitas_fisik: "",
+      status_gizi: "",
+      riwayat_imunisasi: "",
+      dukungan_keluarga: "",
+      kondisi_rumah: "",
+      kebutuhan_mendesak: [],
+      hobi_minat: "",
+      kondisi_psikologis: "",
+      nama_pendamping: "",
+      hubungan_dengan_lansia: "",
+      tanggal_lahir_pendamping: "",
+      pendidikan_pendamping: "",
+      ketersediaan_waktu: "",
+      partisipasi_program_bkl: "",
+      riwayat_partisipasi_bkl: "",
+      keterlibatan_data: "",
+      bab: 0,
+      bak: 0,
+      membersihkan_diri: 0,
+      toilet: 0,
+      makan: 0,
+      pindah_tempat: 0,
+      mobilitas: 0,
+      berpakaian: 0,
+      naik_turun_tangga: 0,
+    })
   }
 
   return (
@@ -280,7 +292,7 @@ function InputDataContent() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="jenis_kelamin">Jenis Kelamin *</Label>
                       <Select
@@ -295,14 +307,6 @@ function InputDataContent() {
                           <SelectItem value="Perempuan">Perempuan</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="tempat_lahir">Tempat Lahir</Label>
-                      <Input
-                        id="tempat_lahir"
-                        value={formData.tempat_lahir}
-                        onChange={(e) => handleInputChange("tempat_lahir", e.target.value)}
-                      />
                     </div>
                     <div>
                       <Label htmlFor="tanggal_lahir">Tanggal Lahir</Label>
@@ -324,7 +328,17 @@ function InputDataContent() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <Label htmlFor="koordinat">Koordinat (Latitude, Longitude)</Label>
+                    <Input
+                      id="koordinat"
+                      value={formData.koordinat}
+                      onChange={(e) => handleInputChange("koordinat", e.target.value)}
+                      placeholder="Contoh: -6.2088, 106.8456"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="rt">RT</Label>
                       <Input id="rt" value={formData.rt} onChange={(e) => handleInputChange("rt", e.target.value)} />
@@ -332,22 +346,6 @@ function InputDataContent() {
                     <div>
                       <Label htmlFor="rw">RW</Label>
                       <Input id="rw" value={formData.rw} onChange={(e) => handleInputChange("rw", e.target.value)} />
-                    </div>
-                    <div>
-                      <Label htmlFor="kelurahan">Kelurahan</Label>
-                      <Input
-                        id="kelurahan"
-                        value={formData.kelurahan}
-                        onChange={(e) => handleInputChange("kelurahan", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="kecamatan">Kecamatan</Label>
-                      <Input
-                        id="kecamatan"
-                        value={formData.kecamatan}
-                        onChange={(e) => handleInputChange("kecamatan", e.target.value)}
-                      />
                     </div>
                   </div>
 
@@ -534,180 +532,76 @@ function InputDataContent() {
                   </div>
 
                   <div>
-                    <Label>Alat Bantu yang Digunakan</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
-                      {["Tongkat", "Kursi Roda", "Kacamata", "Alat Bantu Dengar"].map((tool) => (
-                        <div key={tool} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={tool}
-                            checked={formData.alat_bantu.includes(tool)}
-                            onCheckedChange={(checked) => handleArrayChange("alat_bantu", tool, checked as boolean)}
-                          />
-                          <Label htmlFor={tool} className="text-sm">
-                            {tool}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
+                    <Label htmlFor="alat_bantu">Alat Bantu yang Digunakan</Label>
+                    <Input
+                      id="alat_bantu"
+                      value={formData.alat_bantu}
+                      onChange={(e) => handleInputChange("alat_bantu", e.target.value)}
+                      placeholder="Contoh: Tongkat, Kacamata"
+                    />
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Social Welfare Data */}
+              {/* Daily Living Activities (ADL) */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Data Kesejahteraan Sosial</CardTitle>
-                  <CardDescription>Informasi kondisi sosial dan ekonomi lansia</CardDescription>
+                  <CardTitle>Aktivitas Kehidupan Sehari-hari (ADL)</CardTitle>
+                  <CardDescription>
+                    Penilaian kemampuan melakukan aktivitas sehari-hari (0=Tidak Mampu, 1=Bantuan, 2=Mandiri)
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="tinggal_dengan">Tinggal Dengan</Label>
-                      <Select
-                        value={formData.tinggal_dengan}
-                        onValueChange={(value) => handleInputChange("tinggal_dengan", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih status tinggal" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Sendiri">Sendiri</SelectItem>
-                          <SelectItem value="Pasangan">Pasangan</SelectItem>
-                          <SelectItem value="Anak">Anak</SelectItem>
-                          <SelectItem value="Cucu">Cucu</SelectItem>
-                          <SelectItem value="Keluarga Lain">Keluarga Lain</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="dukungan_keluarga">Dukungan Keluarga</Label>
-                      <Select
-                        value={formData.dukungan_keluarga}
-                        onValueChange={(value) => handleInputChange("dukungan_keluarga", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih tingkat dukungan" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Sangat baik">Sangat baik</SelectItem>
-                          <SelectItem value="Baik">Baik</SelectItem>
-                          <SelectItem value="Cukup">Cukup</SelectItem>
-                          <SelectItem value="Kurang">Kurang</SelectItem>
-                          <SelectItem value="Tidak ada">Tidak ada</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="kondisi_rumah">Kondisi Rumah</Label>
-                      <Select
-                        value={formData.kondisi_rumah}
-                        onValueChange={(value) => handleInputChange("kondisi_rumah", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih kondisi rumah" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Layak huni">Layak huni</SelectItem>
-                          <SelectItem value="Perlu perbaikan">Perlu perbaikan</SelectItem>
-                          <SelectItem value="Tidak layak huni">Tidak layak huni</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="aksesibilitas_rumah">Aksesibilitas Rumah</Label>
-                      <Select
-                        value={formData.aksesibilitas_rumah}
-                        onValueChange={(value) => handleInputChange("aksesibilitas_rumah", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih aksesibilitas" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Sangat aksesibel">Sangat aksesibel</SelectItem>
-                          <SelectItem value="Cukup aksesibel">Cukup aksesibel</SelectItem>
-                          <SelectItem value="Kurang aksesibel">Kurang aksesibel</SelectItem>
-                          <SelectItem value="Tidak aksesibel">Tidak aksesibel</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="sanitasi_rumah">Sanitasi Rumah</Label>
-                      <Select
-                        value={formData.sanitasi_rumah}
-                        onValueChange={(value) => handleInputChange("sanitasi_rumah", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih kondisi sanitasi" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Sangat baik">Sangat baik</SelectItem>
-                          <SelectItem value="Baik">Baik</SelectItem>
-                          <SelectItem value="Cukup">Cukup</SelectItem>
-                          <SelectItem value="Kurang">Kurang</SelectItem>
-                          <SelectItem value="Buruk">Buruk</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {[
+                      { key: "bab", label: "BAB (Buang Air Besar)" },
+                      { key: "bak", label: "BAK (Buang Air Kecil)" },
+                      { key: "membersihkan_diri", label: "Membersihkan Diri" },
+                      { key: "toilet", label: "Menggunakan Toilet" },
+                      { key: "makan", label: "Makan" },
+                      { key: "pindah_tempat", label: "Pindah Tempat" },
+                      { key: "mobilitas", label: "Mobilitas" },
+                      { key: "berpakaian", label: "Berpakaian" },
+                      { key: "naik_turun_tangga", label: "Naik Turun Tangga" },
+                    ].map((item) => (
+                      <div key={item.key}>
+                        <Label htmlFor={item.key}>{item.label}</Label>
+                        <Select
+                          value={formData[item.key as keyof typeof formData]?.toString() || "0"}
+                          onValueChange={(value) => handleInputChange(item.key, Number.parseInt(value))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">0 - Tidak Mampu</SelectItem>
+                            <SelectItem value="1">1 - Butuh Bantuan</SelectItem>
+                            <SelectItem value="2">2 - Mandiri</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
                   </div>
-
-                  <div>
-                    <Label>Kebutuhan Mendesak</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-                      {[
-                        "Bantuan obat",
-                        "Bantuan makanan",
-                        "Perbaikan rumah",
-                        "Alat bantu",
-                        "Perawatan medis",
-                        "Bantuan keuangan",
-                      ].map((need) => (
-                        <div key={need} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={need}
-                            checked={formData.kebutuhan_mendesak.includes(need)}
-                            onCheckedChange={(checked) =>
-                              handleArrayChange("kebutuhan_mendesak", need, checked as boolean)
-                            }
-                          />
-                          <Label htmlFor={need} className="text-sm">
-                            {need}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="hobi_minat">Hobi & Minat</Label>
-                      <Textarea
-                        id="hobi_minat"
-                        value={formData.hobi_minat}
-                        onChange={(e) => handleInputChange("hobi_minat", e.target.value)}
-                        placeholder="Contoh: Berkebun, memasak, menonton TV"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="kondisi_psikologis">Kondisi Psikologis</Label>
-                      <Select
-                        value={formData.kondisi_psikologis}
-                        onValueChange={(value) => handleInputChange("kondisi_psikologis", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih kondisi psikologis" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Sangat baik">Sangat baik</SelectItem>
-                          <SelectItem value="Baik">Baik</SelectItem>
-                          <SelectItem value="Stabil">Stabil</SelectItem>
-                          <SelectItem value="Cemas">Cemas</SelectItem>
-                          <SelectItem value="Depresi">Depresi</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <Label className="font-semibold">Total Skor ADL:</Label>
+                    <p className="text-lg font-bold text-blue-600">
+                      {Object.keys(formData)
+                        .filter((key) =>
+                          [
+                            "bab",
+                            "bak",
+                            "membersihkan_diri",
+                            "toilet",
+                            "makan",
+                            "pindah_tempat",
+                            "mobilitas",
+                            "berpakaian",
+                            "naik_turun_tangga",
+                          ].includes(key),
+                        )
+                        .reduce((total, key) => total + ((formData[key as keyof typeof formData] as number) || 0), 0)}
+                      / 18
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -752,14 +646,12 @@ function InputDataContent() {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <Label htmlFor="usia_pendamping">Usia Pendamping</Label>
+                      <Label htmlFor="tanggal_lahir_pendamping">Tanggal Lahir Pendamping</Label>
                       <Input
-                        id="usia_pendamping"
-                        type="number"
-                        value={formData.usia_pendamping}
-                        onChange={(e) => handleInputChange("usia_pendamping", e.target.value)}
-                        min="0"
-                        max="120"
+                        id="tanggal_lahir_pendamping"
+                        type="date"
+                        value={formData.tanggal_lahir_pendamping}
+                        onChange={(e) => handleInputChange("tanggal_lahir_pendamping", e.target.value)}
                       />
                     </div>
                     <div>
@@ -803,83 +695,33 @@ function InputDataContent() {
                       </Select>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
 
-              {/* BKL Participation */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Partisipasi BKL (Bina Keluarga Lansia)</CardTitle>
-                  <CardDescription>Informasi keterlibatan dalam program BKL</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="keterlibatan_kelompok">Keterlibatan Kelompok</Label>
-                      <Select
-                        value={formData.keterlibatan_kelompok}
-                        onValueChange={(value) => handleInputChange("keterlibatan_kelompok", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih keterlibatan" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Posyandu Lansia">Posyandu Lansia</SelectItem>
-                          <SelectItem value="Kelompok Lansia RW">Kelompok Lansia RW</SelectItem>
-                          <SelectItem value="Arisan Lansia">Arisan Lansia</SelectItem>
-                          <SelectItem value="Pengajian Lansia">Pengajian Lansia</SelectItem>
-                          <SelectItem value="Tidak terlibat">Tidak terlibat</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="partisipasi_program_bkl">Partisipasi Program BKL</Label>
+                      <Input
+                        id="partisipasi_program_bkl"
+                        value={formData.partisipasi_program_bkl}
+                        onChange={(e) => handleInputChange("partisipasi_program_bkl", e.target.value)}
+                        placeholder="Contoh: Posyandu Lansia"
+                      />
                     </div>
                     <div>
-                      <Label htmlFor="frekuensi_kegiatan">Frekuensi Kegiatan</Label>
-                      <Select
-                        value={formData.frekuensi_kegiatan}
-                        onValueChange={(value) => handleInputChange("frekuensi_kegiatan", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih frekuensi" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Harian">Harian</SelectItem>
-                          <SelectItem value="Mingguan">Mingguan</SelectItem>
-                          <SelectItem value="Bulanan">Bulanan</SelectItem>
-                          <SelectItem value="Kadang-kadang">Kadang-kadang</SelectItem>
-                          <SelectItem value="Tidak pernah">Tidak pernah</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="keterlibatan_data">Keterlibatan Data</Label>
+                      <Input
+                        id="keterlibatan_data"
+                        value={formData.keterlibatan_data}
+                        onChange={(e) => handleInputChange("keterlibatan_data", e.target.value)}
+                      />
                     </div>
                   </div>
 
                   <div>
-                    <Label>Jenis Kegiatan yang Diikuti</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-                      {["Senam lansia", "Pemeriksaan kesehatan", "Arisan", "Pengajian", "Keterampilan", "Rekreasi"].map(
-                        (activity) => (
-                          <div key={activity} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={activity}
-                              checked={formData.jenis_kegiatan.includes(activity)}
-                              onCheckedChange={(checked) =>
-                                handleArrayChange("jenis_kegiatan", activity, checked as boolean)
-                              }
-                            />
-                            <Label htmlFor={activity} className="text-sm">
-                              {activity}
-                            </Label>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="riwayat_partisipasi">Riwayat Partisipasi</Label>
+                    <Label htmlFor="riwayat_partisipasi_bkl">Riwayat Partisipasi BKL</Label>
                     <Textarea
-                      id="riwayat_partisipasi"
-                      value={formData.riwayat_partisipasi}
-                      onChange={(e) => handleInputChange("riwayat_partisipasi", e.target.value)}
+                      id="riwayat_partisipasi_bkl"
+                      value={formData.riwayat_partisipasi_bkl}
+                      onChange={(e) => handleInputChange("riwayat_partisipasi_bkl", e.target.value)}
                       placeholder="Contoh: Aktif sejak 2020, pernah menjadi ketua kelompok"
                     />
                   </div>

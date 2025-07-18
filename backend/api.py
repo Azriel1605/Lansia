@@ -533,35 +533,19 @@ def get_urgent_need_details(need_type):
 @api.route('/export-template', methods=['GET'])
 @login_required
 def export_template():
-    template_data = {
-        'Nama Lengkap': [''],
-        'NIK': [''],
-        'Jenis Kelamin': ['Laki-laki/Perempuan'],
-        'Tanggal Lahir': ['YYYY-MM-DD'],
-        'Alamat Lengkap': [''],
-        'RT': [''],
-        'RW': [''],
-        'Status Perkawinan': [''],
-        'Agama': [''],
-        'Pendidikan Terakhir': [''],
-        'Pekerjaan Terakhir': [''],
-        'Sumber Penghasilan': ['']
-    }
+    return None
+
+@api.route('/upload-excel', methods=['POST'])
+def upload_excel():
+    file = request.files['file']
     
-    df = pd.DataFrame(template_data)
+    print(file)
     
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, sheet_name='Template Input Lansia', index=False)
+    return jsonify({
+        'message': 'Done'
+    })
     
-    output.seek(0)
     
-    return send_file(
-        output,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
-        download_name='template_input_lansia.xlsx'
-    )
 
 # Get filter options for frontend
 @api.route('/filter-options', methods=['GET'])
