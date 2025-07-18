@@ -155,7 +155,6 @@ function DataTableContent() {
       const response = await dataAPI.getFilterOptions()
       if (response.ok) {
         const options = await response.json()
-        console.log(options)
         setFilterOptions(options)
       }
     } catch (error) {
@@ -220,6 +219,7 @@ function DataTableContent() {
       const response = await dataAPI.getLansiaDetail(id)
       if (response.ok) {
         const data = await response.json()
+        console.log(data)
         setEditingLansia(data)
         setIsEditOpen(true)
       }
@@ -1047,8 +1047,7 @@ function DataTableContent() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Menikah">Menikah</SelectItem>
-                          <SelectItem value="Janda">Janda</SelectItem>
-                          <SelectItem value="Duda">Duda</SelectItem>
+                          <SelectItem value="Cerai">Cerai</SelectItem>
                           <SelectItem value="Belum Menikah">Belum Menikah</SelectItem>
                         </SelectContent>
                       </Select>

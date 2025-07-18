@@ -111,12 +111,21 @@ class KeluargaPendamping(db.Model):
     nama_pendamping = db.Column(db.String(255))
     hubungan_dengan_lansia = db.Column(db.String(100))
     tanggal_lahir_pendamping = db.Column(db.Date)
-    usia_pendamping = db.Column(db.Integer)
     pendidikan_pendamping = db.Column(db.String(100))
     ketersediaan_waktu = db.Column(db.String(100))
     partisipasi_program_bkl = db.Column(db.String(100))
     riwayat_partisipasi_bkl = db.Column(db.Text)
     keterlibatan_data = db.Column(db.Text)
+    
+    @hybrid_property
+    def usia(self, reference=datetime.today()):
+        return reference.year - self.tanggal_lahir_pendamping.year - (
+            (reference.month, reference.day) < (self.tanggal_lahir.month_pendampingtanggal_lahir_pendamping, self.tanggal_lahir.day_pendampingtanggal_lahir_pendamping)
+        )
+
+    @usia.expression
+    def usia(cls, reference=func.now()):
+        return extract('year', func.age(reference, cls.tanggal_lahir_pendamping))
 
 class ADailyLiving(db.Model):
     __tablename__ = 'daily_living'
