@@ -138,6 +138,19 @@ function InputDataContent() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      // Validate file type
+      if (!file.name.toLowerCase().endsWith(".xlsx") && !file.name.toLowerCase().endsWith(".xls")) {
+        setError("Format file tidak valid. Harap upload file Excel (.xlsx atau .xls)")
+        return
+      }
+
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        setError("Ukuran file terlalu besar. Maksimal 10MB")
+        return
+      }
+
+      setError("") // Clear any previous errors
       setUploadFile(file)
     }
   }
@@ -156,15 +169,26 @@ function InputDataContent() {
       const formData = new FormData()
       formData.append("file", uploadFile)
 
+      console.log("Uploading file:", uploadFile.name) // Debug log
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload-excel`, {
         method: "POST",
         credentials: "include",
         body: formData,
       })
 
-      const data = await response.json()
+      console.log("Response status:", response.status) // Debug log
 
-      if (response.ok) {
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Upload error:", errorText) // Debug log
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log("Upload response:", data) // Debug log
+
+      if (data.count !== undefined) {
         setMessage(`Berhasil mengupload ${data.count} data lansia`)
         setUploadFile(null)
         // Reset file input
@@ -172,11 +196,18 @@ function InputDataContent() {
         if (fileInput) {
           fileInput.value = ""
         }
+
+        // Show errors if any
+        if (data.errors && data.errors.length > 0) {
+          console.warn("Upload errors:", data.errors)
+          setError(`Upload berhasil dengan beberapa error: ${data.errors.slice(0, 3).join(", ")}`)
+        }
       } else {
         setError(data.message || "Terjadi kesalahan saat mengupload file")
       }
     } catch (err) {
-      setError("Network error. Please try again.")
+      console.error("Upload error:", err) // Debug log
+      setError(`Network error: ${err instanceof Error ? err.message : "Please try again."}`)
     } finally {
       setIsLoading(false)
     }
@@ -774,14 +805,39 @@ function InputDataContent() {
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Langkah 2: Upload File</h3>
                     <p className="text-sm text-gray-600 mb-4">Pilih file Excel yang sudah diisi dengan data lansia</p>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                      <div className="text-center">
-                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                        <div className="mt-4">
+
+                    <div
+                      className="border-2 border-dashed border-gray-300 rounded-lg p-12 hover:border-gray-400 transition-colors min-h-[200px] flex items-center justify-center"
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.currentTarget.classList.add("border-blue-400", "bg-blue-50")
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault()
+                        e.currentTarget.classList.remove("border-blue-400", "bg-blue-50")
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        e.currentTarget.classList.remove("border-blue-400", "bg-blue-50")
+                        const files = e.dataTransfer.files
+                        if (files.length > 0) {
+                          const file = files[0]
+                          if (file.name.toLowerCase().endsWith(".xlsx") || file.name.toLowerCase().endsWith(".xls")) {
+                            setUploadFile(file)
+                          } else {
+                            setError("Format file tidak valid. Harap upload file Excel (.xlsx atau .xls)")
+                          }
+                        }
+                      }}
+                    >
+                      <div className="text-center w-full">
+                        <Upload className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                        <div className="space-y-2">
                           <label htmlFor="file-upload" className="cursor-pointer">
-                            <span className="mt-2 block text-sm font-medium text-gray-900">
-                              Pilih file Excel atau drag & drop di sini
+                            <span className="text-lg font-medium text-gray-900 hover:text-blue-600 block">
+                              Klik untuk pilih file Excel
                             </span>
+                            <span className="text-sm text-gray-500 block mt-1">atau drag & drop file di area ini</span>
                             <input
                               id="file-upload"
                               name="file-upload"
@@ -791,23 +847,38 @@ function InputDataContent() {
                               onChange={handleFileUpload}
                             />
                           </label>
-                          <p className="mt-1 text-xs text-gray-500">Format: .xlsx, .xls (Max: 10MB)</p>
+                          <p className="text-xs text-gray-400 mt-3">
+                            Format yang didukung: .xlsx, .xls (Maksimal: 10MB)
+                          </p>
                         </div>
                       </div>
                     </div>
 
                     {uploadFile && (
-                      <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                         <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-blue-900">{uploadFile.name}</p>
-                            <p className="text-xs text-blue-700">{(uploadFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <FileUp className="w-4 h-4 text-blue-600" />
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-blue-900">{uploadFile.name}</p>
+                              <p className="text-xs text-blue-700">{(uploadFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </div>
                           </div>
                           <Button
-                            onClick={() => setUploadFile(null)}
+                            onClick={() => {
+                              setUploadFile(null)
+                              const fileInput = document.getElementById("file-upload") as HTMLInputElement
+                              if (fileInput) {
+                                fileInput.value = ""
+                              }
+                            }}
                             variant="ghost"
                             size="sm"
-                            className="text-blue-700 hover:text-blue-900"
+                            className="text-blue-700 hover:text-blue-900 hover:bg-blue-100"
                           >
                             Hapus
                           </Button>
@@ -817,20 +888,31 @@ function InputDataContent() {
                   </div>
 
                   <div className="flex justify-end">
-                    <Button onClick={handleUploadSubmit} disabled={!uploadFile || isLoading}>
-                      {isLoading ? "Mengupload..." : "Upload Data"}
+                    <Button onClick={handleUploadSubmit} disabled={!uploadFile || isLoading} className="min-w-[120px]">
+                      {isLoading ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Mengupload...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Upload Data
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
 
-                <div className="mt-8 p-4 bg-yellow-50 rounded-lg">
+                <div className="mt-8 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                   <h4 className="font-semibold text-yellow-800 mb-2">Catatan Penting:</h4>
                   <ul className="text-sm text-yellow-700 space-y-1">
-                    <li>Pastikan format file sesuai dengan template yang disediakan</li>
-                    <li>NIK harus unik dan tidak boleh duplikat</li>
-                    <li>Tanggal lahir harus dalam format YYYY-MM-DD</li>
-                    <li>Kolom yang wajib diisi: Nama Lengkap, NIK, Jenis Kelamin</li>
-                    <li>File maksimal berukuran 10MB</li>
+                    <li>• Pastikan format file sesuai dengan template yang disediakan</li>
+                    <li>• NIK harus unik dan tidak boleh duplikat</li>
+                    <li>• Tanggal lahir harus dalam format YYYY-MM-DD</li>
+                    <li>• Kolom yang wajib diisi: Nama Lengkap, NIK, Jenis Kelamin</li>
+                    <li>• File maksimal berukuran 10MB</li>
+                    <li>• Pastikan tidak ada baris kosong di tengah data</li>
                   </ul>
                 </div>
               </CardContent>

@@ -69,6 +69,7 @@ interface LansiaDetail {
   kesejahteraan: any
   keluarga: any
   daily_living: any
+  created_at: string
 }
 
 interface FilterOptions {
@@ -219,7 +220,6 @@ function DataTableContent() {
       const response = await dataAPI.getLansiaDetail(id)
       if (response.ok) {
         const data = await response.json()
-        console.log(data)
         setEditingLansia(data)
         setIsEditOpen(true)
       }
@@ -1047,7 +1047,8 @@ function DataTableContent() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Menikah">Menikah</SelectItem>
-                          <SelectItem value="Cerai">Cerai</SelectItem>
+                          <SelectItem value="Janda">Janda</SelectItem>
+                          <SelectItem value="Duda">Duda</SelectItem>
                           <SelectItem value="Belum Menikah">Belum Menikah</SelectItem>
                         </SelectContent>
                       </Select>

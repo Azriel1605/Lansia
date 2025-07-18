@@ -535,15 +535,197 @@ def get_urgent_need_details(need_type):
 def export_template():
     return None
 
+# Add upload Excel endpoint
 @api.route('/upload-excel', methods=['POST'])
+@login_required
 def upload_excel():
+    print("Upload Excel endpoint called")  # Debug log
+    
+    if 'file' not in request.files:
+        print("No file in request")  # Debug log
+        return jsonify({'message': 'No file uploaded'}), 400
+    
     file = request.files['file']
+    print(f"File received: {file.filename}")  # Debug log
     
-    print(file)
     
-    return jsonify({
-        'message': 'Done'
-    })
+    if file.filename == '':
+        return jsonify({'message': 'No file selected'}), 400
+    
+    if not file.filename.lower().endswith(('.xlsx', '.xls', 'xlsm')):
+        return jsonify({'message': 'Invalid file format. Please upload Excel file (.xlsx or .xls)'}), 400
+    
+    try:
+        # Read Excel file directly from memory
+        header = ['nama_lengkap', 'nik', 'jenis_kelamin', 'tanggal_lahir', 'alamat_lengkap', 'koordinat', 'rt', 'rw', 'status_perkawinan', 'agama', 'pendidikan_terakhir', 'pekerjaan_terakhir', 'sumber_penghasilan',
+                  'pass1', 'kondisi_kesehatan_umum', 'riwayat_penyakit_kronis', 'penggunaan_obat_rutin', 'alat_bantu', 'aktivitas_fisik', 'status_gizi', 'riwayat_imunisasi',
+                  'pass2', 'dukungan_keluarga', 'kondisi_rumah', 'kebutuhan_mendesak', 'hobi_minat', 'kondisi_psikologis',
+                  'pass 3', 'nama_pendamping', 'hubungan_dengan_lansia', 'tanggal_lahir_pendamping', 'pendidikan_pendamping', 'ketersediaan_waktu', 'partisipasi_program_bkl', 'riwayat_partisipasi_bkl', 'keterlibatan_data',
+                  'pass 4', 'bab', 'bak', 'membersihkan_diri', 'toilet', 'makan', 'pindah_tempat', 'mobilitas', 'berpakaian', 'naik_turun_tangga', 'mandi',
+                ]
+        
+        print("Reading Excel file...")  # Debug log
+        df = pd.read_excel(file.stream)
+        df = df.T
+        df.columns = header
+        df = df.iloc[1:]
+
+        
+        for index, row in df.iterrows():
+            data = row.to_dict()
+            
+            # Optional: parse tanggal_lahir
+            if 'tanggal_lahir' in data and isinstance(data['tanggal_lahir'], str):
+                data['tanggal_lahir'] = datetime.strptime(data['tanggal_lahir'], '%Y-%m-%d').date()
+                
+            if 'tanggal_lahir_pendamping' in data and isinstance(data['tanggal_lahir_pendamping'], str):
+                data['tanggal_lahir_pendamping'] = datetime.strptime(data['tanggal_lahir_pendamping'], '%Y-%m-%d').date()
+            
+            lansia = Lansia()
+            for column in Lansia.__table__.columns:
+                col_name = column.name
+                if col_name != 'id' and col_name in data:
+                    value = data[col_name]
+                    setattr(lansia, col_name, value)
+            
+            db.session.add(lansia)
+            db.session.flush()  # Get lansia.id
+            
+            # 2️⃣ Create KesehatanLansia object
+            kesehatan = KesehatanLansia()
+            for column in KesehatanLansia.__table__.columns:
+                col_name = column.name
+                if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
+                    setattr(kesehatan, col_name, data[col_name])
+
+            kesehatan.lansia_id = lansia.id
+            db.session.add(kesehatan)
+            
+            # 3
+            kesejahteraan = KesejahteraanSosial()
+            for column in KesejahteraanSosial.__table__.columns:
+                col_name = column.name
+                if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
+                    setattr(kesejahteraan, col_name, data[col_name])
+
+            kesejahteraan.lansia_id = lansia.id
+            db.session.add(kesejahteraan)
+            
+            # 4
+            pendamping = KeluargaPendamping()
+            for column in KeluargaPendamping.__table__.columns:
+                col_name = column.name
+                if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
+                    setattr(pendamping, col_name, data[col_name])
+
+            pendamping.lansia_id = lansia.id
+            db.session.add(pendamping)
+            
+            # 5
+            adl = ADailyLiving()
+            for column in ADailyLiving.__table__.columns:
+                col_name = column.name
+                if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
+                    setattr(adl, col_name, data[col_name])
+
+            adl.lansia_id = lansia.id
+            db.session.add(adl)
+
+            # Commit
+            # db.session.commit()
+                    
+        
+        return jsonify({'messge': 'already there'}), 200
+        
+        print(f"Excel file read successfully. Shape: {df.shape}")  # Debug log
+        print(f"Columns: {df.columns.tolist()}")  # Debug log
+        
+        # Validate required columns
+        required_columns = ['Nama Lengkap', 'NIK', 'Jenis Kelamin']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            return jsonify({'message': f'Missing required columns: {", ".join(missing_columns)}'}), 400
+        
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        for index, row in df.iterrows():
+            try:
+                # Skip empty rows
+                if pd.isna(row['Nama Lengkap']) or pd.isna(row['NIK']):
+                    continue
+                
+                # Check if NIK already exists
+                existing = Lansia.query.filter_by(nik=str(row['NIK'])).first()
+                if existing:
+                    error_count += 1
+                    errors.append(f'Row {index + 2}: NIK {row["NIK"]} already exists')
+                    continue
+                
+                # Create lansia record
+                lansia_data = {
+                    'nama_lengkap': str(row['Nama Lengkap']),
+                    'nik': str(row['NIK']),
+                    'jenis_kelamin': str(row['Jenis Kelamin']),
+                }
+                
+                # Add optional fields if they exist and are not empty
+                optional_fields = {
+                    'tanggal_lahir': 'Tanggal Lahir',
+                    'alamat_lengkap': 'Alamat Lengkap',
+                    'koordinat': 'Koordinat',
+                    'rt': 'RT',
+                    'rw': 'RW',
+                    'status_perkawinan': 'Status Perkawinan',
+                    'agama': 'Agama',
+                    'pendidikan_terakhir': 'Pendidikan Terakhir',
+                    'pekerjaan_terakhir': 'Pekerjaan Terakhir',
+                    'sumber_penghasilan': 'Sumber Penghasilan'
+                }
+                
+                for field, col_name in optional_fields.items():
+                    if col_name in df.columns and not pd.isna(row[col_name]):
+                        if field == 'tanggal_lahir':
+                            try:
+                                lansia_data[field] = pd.to_datetime(row[col_name]).date()
+                            except:
+                                pass  # Skip invalid dates
+                        else:
+                            lansia_data[field] = str(row[col_name])
+                
+                lansia = Lansia(**lansia_data)
+                db.session.add(lansia)
+                db.session.flush()
+                
+                success_count += 1
+                print(f"Successfully processed row {index + 2}")  # Debug log
+                
+            except Exception as e:
+                error_count += 1
+                error_msg = f'Row {index + 2}: {str(e)}'
+                errors.append(error_msg)
+                print(f"Error processing row {index + 2}: {str(e)}")  # Debug log
+                continue
+        
+        db.session.commit()
+        print(f"Upload completed. Success: {success_count}, Errors: {error_count}")  # Debug log
+        
+        response_message = f'Successfully imported {success_count} records'
+        if error_count > 0:
+            response_message += f', {error_count} errors occurred'
+        
+        return jsonify({
+            'message': response_message,
+            'count': success_count,
+            'errors': errors[:10]  # Return first 10 errors
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Upload error: {str(e)}")  # Debug log
+        return jsonify({'message': f'Error processing file: {str(e)}'}), 400
+
     
     
 

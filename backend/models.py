@@ -140,6 +140,7 @@ class ADailyLiving(db.Model):
     mobilitas = db.Column(db.Integer)
     berpakaian = db.Column(db.Integer)
     naik_turun_tangga = db.Column(db.Integer)
+    mandi = db.Column(db.Integer)
     total = db.Column(db.Integer)
     
     def calculate_total(self):
@@ -152,6 +153,7 @@ class ADailyLiving(db.Model):
             (self.pindah_tempat or 0) +
             (self.mobilitas or 0) +
             (self.berpakaian or 0) +
-            (self.naik_turun_tangga or 0)
+            (self.naik_turun_tangga or 0) +
+            (self.mandi or 0)
         )
         return self.total

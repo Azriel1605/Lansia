@@ -99,4 +99,5 @@ export const dataAPI = {
     apiCall(`/api/dashboard/urgent-need-details/${encodeURIComponent(needType)}`),
 
   exportTemplate: () => apiCall("/api/export-template"),
+  uploadExcel: () => apiCall("api/upload-excel")
 }

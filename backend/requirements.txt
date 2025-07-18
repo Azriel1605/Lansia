@@ -7,3 +7,4 @@ pandas
 sqlalchemy
 psycopg2
 faker
+openpyxl
