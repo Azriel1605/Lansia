@@ -4,10 +4,12 @@ from dotenv import load_dotenv
 
 class Config:
     # Database
-    print(os.getenv('DATABASE_URL', 'postgresql://'))
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://user:password@localhost/lansia_db')
+    
+    # SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://user:password@localhost/lansia_db')
+    SQLALCHEMY_DATABASE_URI = 'postgresql://keyopptta:Ra_sy6a7e2@localhost/lansia_db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    print(SQLALCHEMY_DATABASE_URI)
     # Security
     SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-here')
     SESSION_COOKIE_HTTPONLY = True

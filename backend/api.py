@@ -5,8 +5,10 @@ from datetime import datetime, timedelta, date
 from sqlalchemy import text, func, or_, and_
 import pandas as pd
 import io
+import os
 import secrets
 from sqlalchemy.dialects.postgresql import ARRAY  # Pastikan ini di-import
+from error import error_d
 # from seed import generate_fake_data
 
 from models import db, User, PasswordResetToken, Lansia, KesehatanLansia, KesejahteraanSosial, KeluargaPendamping, ADailyLiving
@@ -181,8 +183,15 @@ def get_lansia():
 @login_required
 def create_lansia():
     data = request.get_json()
+    for key, value in data.items():
+        print(key, value)    
             
     try:
+        # Check if NIK already exists
+        existing = Lansia.query.filter_by(nik=str(data['nik'])).first()
+        if existing:
+            return jsonify({'message': f'Error: NIK {data['nik']}  sudah terdaftar'}), 400
+        
         # Create main lansia record
         lansia_data = {
             'nama_lengkap': data.get('nama_lengkap'),
@@ -210,7 +219,7 @@ def create_lansia():
                 kondisi_kesehatan_umum=data.get('kondisi_kesehatan_umum'),
                 riwayat_penyakit_kronis=data.get('riwayat_penyakit_kronis', []),
                 penggunaan_obat_rutin=data.get('penggunaan_obat_rutin'),
-                alat_bantu=','.join(data.get('alat_bantu', [])),
+                alat_bantu=data.get('alat_bantu'),
                 aktivitas_fisik=data.get('aktivitas_fisik'),
                 status_gizi=data.get('status_gizi'),
                 riwayat_imunisasi=data.get('riwayat_imunisasi')
@@ -235,13 +244,30 @@ def create_lansia():
                 lansia_id=lansia.id,
                 nama_pendamping=data.get('nama_pendamping'),
                 hubungan_dengan_lansia=data.get('hubungan_dengan_lansia'),
-                usia_pendamping=int(data.get('usia_pendamping')) if data.get('usia_pendamping') else None,
+                tanggal_lahir_pendamping=datetime.strptime(data['tanggal_lahir_pendamping'], '%Y-%m-%d').date() if data.get('tanggal_lahir_pendamping') else None,
                 pendidikan_pendamping=data.get('pendidikan_pendamping'),
                 ketersediaan_waktu=data.get('ketersediaan_waktu'),
-                partisipasi_program_bkl=data.get('keterlibatan_kelompok'),
-                riwayat_partisipasi_bkl=data.get('riwayat_partisipasi')
+                partisipasi_program_bkl=data.get('partisipasi_program_bkl'),
+                riwayat_partisipasi_bkl=data.get('riwayat_partisipasi_bkl'),
+                keterlibatan_data=data.get('keterlibatan_data'),
             )
             db.session.add(keluarga)
+            
+        adl = ADailyLiving(
+            lansia_id=lansia.id,
+            bab = data.get('bab'),
+            membersihkan_diri = data.get('membersihkan_diri'),
+            toilet = data.get('toilet'),
+            makan = data.get('makan'),
+            pindah_tempat = data.get('pindah_tempat'),
+            mobilitas = data.get('mobilitas'),
+            berpakaian = data.get('berpakaian'),
+            naik_turun_tangga = data.get('naik_turun_tangga'),
+            mandi = data.get('mandi'),
+            total = data.get('total'),
+        )
+        
+        adl.calculate_total()
         
         db.session.commit()
         return jsonify({'message': 'Data lansia berhasil ditambahkan', 'id': lansia.id}), 201
@@ -296,7 +322,7 @@ def get_lansia_detail(lansia_id):
         'keluarga': {
             'nama_pendamping': keluarga.nama_pendamping if keluarga else None,
             'hubungan_dengan_lansia': keluarga.hubungan_dengan_lansia if keluarga else None,
-            'usia_pendamping': keluarga.usia_pendamping if keluarga else None,
+            'usia_pendamping': keluarga.usia if keluarga else None,
             'pendidikan_pendamping': keluarga.pendidikan_pendamping if keluarga else None,
             'ketersediaan_waktu': keluarga.ketersediaan_waktu if keluarga else None,
             'partisipasi_program_bkl': keluarga.partisipasi_program_bkl if keluarga else None,
@@ -533,7 +559,11 @@ def get_urgent_need_details(need_type):
 @api.route('/export-template', methods=['GET'])
 @login_required
 def export_template():
-    return None
+    file_path = os.path.join('static', 'file', 'LansiaTemplate.xlsm')  # sesuaikan dengan path file 
+    return send_file(
+        file_path,
+        as_attachment=True,
+    ), 200
 
 # Add upload Excel endpoint
 @api.route('/upload-excel', methods=['POST'])
@@ -560,160 +590,124 @@ def upload_excel():
         header = ['nama_lengkap', 'nik', 'jenis_kelamin', 'tanggal_lahir', 'alamat_lengkap', 'koordinat', 'rt', 'rw', 'status_perkawinan', 'agama', 'pendidikan_terakhir', 'pekerjaan_terakhir', 'sumber_penghasilan',
                   'pass1', 'kondisi_kesehatan_umum', 'riwayat_penyakit_kronis', 'penggunaan_obat_rutin', 'alat_bantu', 'aktivitas_fisik', 'status_gizi', 'riwayat_imunisasi',
                   'pass2', 'dukungan_keluarga', 'kondisi_rumah', 'kebutuhan_mendesak', 'hobi_minat', 'kondisi_psikologis',
-                  'pass 3', 'nama_pendamping', 'hubungan_dengan_lansia', 'tanggal_lahir_pendamping', 'pendidikan_pendamping', 'ketersediaan_waktu', 'partisipasi_program_bkl', 'riwayat_partisipasi_bkl', 'keterlibatan_data',
-                  'pass 4', 'bab', 'bak', 'membersihkan_diri', 'toilet', 'makan', 'pindah_tempat', 'mobilitas', 'berpakaian', 'naik_turun_tangga', 'mandi',
+                  'pass3', 'nama_pendamping', 'hubungan_dengan_lansia', 'tanggal_lahir_pendamping', 'pendidikan_pendamping', 'ketersediaan_waktu', 'partisipasi_program_bkl', 'riwayat_partisipasi_bkl', 'keterlibatan_data',
+                  'pass4', 'bab', 'bak', 'membersihkan_diri', 'toilet', 'makan', 'pindah_tempat', 'mobilitas', 'berpakaian', 'naik_turun_tangga', 'mandi',
                 ]
         
         print("Reading Excel file...")  # Debug log
         df = pd.read_excel(file.stream)
         df = df.T
         df.columns = header
+        df.drop(['pass1', 'pass2', 'pass3', 'pass4'], axis=1, inplace=True)
         df = df.iloc[1:]
-
-        
-        for index, row in df.iterrows():
-            data = row.to_dict()
-            
-            # Optional: parse tanggal_lahir
-            if 'tanggal_lahir' in data and isinstance(data['tanggal_lahir'], str):
-                data['tanggal_lahir'] = datetime.strptime(data['tanggal_lahir'], '%Y-%m-%d').date()
-                
-            if 'tanggal_lahir_pendamping' in data and isinstance(data['tanggal_lahir_pendamping'], str):
-                data['tanggal_lahir_pendamping'] = datetime.strptime(data['tanggal_lahir_pendamping'], '%Y-%m-%d').date()
-            
-            lansia = Lansia()
-            for column in Lansia.__table__.columns:
-                col_name = column.name
-                if col_name != 'id' and col_name in data:
-                    value = data[col_name]
-                    setattr(lansia, col_name, value)
-            
-            db.session.add(lansia)
-            db.session.flush()  # Get lansia.id
-            
-            # 2️⃣ Create KesehatanLansia object
-            kesehatan = KesehatanLansia()
-            for column in KesehatanLansia.__table__.columns:
-                col_name = column.name
-                if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
-                    setattr(kesehatan, col_name, data[col_name])
-
-            kesehatan.lansia_id = lansia.id
-            db.session.add(kesehatan)
-            
-            # 3
-            kesejahteraan = KesejahteraanSosial()
-            for column in KesejahteraanSosial.__table__.columns:
-                col_name = column.name
-                if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
-                    setattr(kesejahteraan, col_name, data[col_name])
-
-            kesejahteraan.lansia_id = lansia.id
-            db.session.add(kesejahteraan)
-            
-            # 4
-            pendamping = KeluargaPendamping()
-            for column in KeluargaPendamping.__table__.columns:
-                col_name = column.name
-                if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
-                    setattr(pendamping, col_name, data[col_name])
-
-            pendamping.lansia_id = lansia.id
-            db.session.add(pendamping)
-            
-            # 5
-            adl = ADailyLiving()
-            for column in ADailyLiving.__table__.columns:
-                col_name = column.name
-                if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
-                    setattr(adl, col_name, data[col_name])
-
-            adl.lansia_id = lansia.id
-            db.session.add(adl)
-
-            # Commit
-            # db.session.commit()
-                    
-        
-        return jsonify({'messge': 'already there'}), 200
+        df.index = range(2, len(df) + 2)
         
         print(f"Excel file read successfully. Shape: {df.shape}")  # Debug log
-        print(f"Columns: {df.columns.tolist()}")  # Debug log
-        
-        # Validate required columns
-        required_columns = ['Nama Lengkap', 'NIK', 'Jenis Kelamin']
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        if missing_columns:
-            return jsonify({'message': f'Missing required columns: {", ".join(missing_columns)}'}), 400
-        
         success_count = 0
         error_count = 0
         errors = []
         
+        # missing_columns = [col for col in required_columns if col not in df.columns]
+        
         for index, row in df.iterrows():
             try:
-                # Skip empty rows
-                if pd.isna(row['Nama Lengkap']) or pd.isna(row['NIK']):
-                    continue
+                # Validate required columns
+                
+                data = row.to_dict()
+                
+                for d, val in data.items():
+                    if pd.isna(val):
+                        error_count += 1
+                        error_msg = f'Data {error_d[d]} Kolom {index}: Data Kosong'
+                        errors.append(error_msg)
+                        print(f"Error processing row {index} kolom {d}: Data Kosong")  # Debug log
+                
+                # Optional: parse tanggal_lahir
+                if 'tanggal_lahir' in data and isinstance(data['tanggal_lahir'], str):
+                    data['tanggal_lahir'] = datetime.strptime(data['tanggal_lahir'], '%Y-%m-%d').date()
+                    
+                if 'tanggal_lahir_pendamping' in data and isinstance(data['tanggal_lahir_pendamping'], str):
+                    data['tanggal_lahir_pendamping'] = datetime.strptime(data['tanggal_lahir_pendamping'], '%Y-%m-%d').date()
                 
                 # Check if NIK already exists
-                existing = Lansia.query.filter_by(nik=str(row['NIK'])).first()
+                existing = Lansia.query.filter_by(nik=str(row['nik'])).first()
                 if existing:
                     error_count += 1
-                    errors.append(f'Row {index + 2}: NIK {row["NIK"]} already exists')
+                    errors.append(f'Kolom {index}: NIK {row["nik"]} sudah terdaftar')
                     continue
                 
-                # Create lansia record
-                lansia_data = {
-                    'nama_lengkap': str(row['Nama Lengkap']),
-                    'nik': str(row['NIK']),
-                    'jenis_kelamin': str(row['Jenis Kelamin']),
-                }
+                lansia = Lansia()
+                for column in Lansia.__table__.columns:
+                    col_name = column.name
+                    if col_name != 'id' and col_name in data:
+                        value = data[col_name]
+                        setattr(lansia, col_name, value)
                 
-                # Add optional fields if they exist and are not empty
-                optional_fields = {
-                    'tanggal_lahir': 'Tanggal Lahir',
-                    'alamat_lengkap': 'Alamat Lengkap',
-                    'koordinat': 'Koordinat',
-                    'rt': 'RT',
-                    'rw': 'RW',
-                    'status_perkawinan': 'Status Perkawinan',
-                    'agama': 'Agama',
-                    'pendidikan_terakhir': 'Pendidikan Terakhir',
-                    'pekerjaan_terakhir': 'Pekerjaan Terakhir',
-                    'sumber_penghasilan': 'Sumber Penghasilan'
-                }
-                
-                for field, col_name in optional_fields.items():
-                    if col_name in df.columns and not pd.isna(row[col_name]):
-                        if field == 'tanggal_lahir':
-                            try:
-                                lansia_data[field] = pd.to_datetime(row[col_name]).date()
-                            except:
-                                pass  # Skip invalid dates
-                        else:
-                            lansia_data[field] = str(row[col_name])
-                
-                lansia = Lansia(**lansia_data)
                 db.session.add(lansia)
-                db.session.flush()
+                db.session.flush()  # Get lansia.id
                 
+                # 2️⃣ Create KesehatanLansia object
+                kesehatan = KesehatanLansia()
+                for column in KesehatanLansia.__table__.columns:
+                    col_name = column.name
+                    if col_name == 'riwayat_penyakit_kronis':
+                        setattr(kesehatan, col_name, data[col_name].split(sep=','))
+                        continue                
+                    
+                    if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
+                        setattr(kesehatan, col_name, data[col_name])
+
+                kesehatan.lansia_id = lansia.id
+                db.session.add(kesehatan)
+                
+                # 3
+                kesejahteraan = KesejahteraanSosial()
+                for column in KesejahteraanSosial.__table__.columns:
+                    col_name = column.name
+                    if col_name == 'kebutuhan_mendesak':
+                        setattr(kesejahteraan, col_name, data[col_name].split(sep=','))
+                        continue
+                    
+                    if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
+                        setattr(kesejahteraan, col_name, data[col_name])
+
+                kesejahteraan.lansia_id = lansia.id
+                db.session.add(kesejahteraan)
+                
+                # 4
+                pendamping = KeluargaPendamping()
+                for column in KeluargaPendamping.__table__.columns:
+                    col_name = column.name
+                    if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
+                        setattr(pendamping, col_name, data[col_name])
+
+                pendamping.lansia_id = lansia.id
+                db.session.add(pendamping)
+                
+                # 5
+                adl = ADailyLiving()
+                for column in ADailyLiving.__table__.columns:
+                    col_name = column.name
+                    if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
+                        setattr(adl, col_name, data[col_name])
+
+                adl.lansia_id = lansia.id
+                db.session.add(adl)
                 success_count += 1
-                print(f"Successfully processed row {index + 2}")  # Debug log
-                
+
             except Exception as e:
                 error_count += 1
-                error_msg = f'Row {index + 2}: {str(e)}'
+                error_msg = f'Data {error_d[d]} kolom {index} : {str(e)}'
                 errors.append(error_msg)
                 print(f"Error processing row {index + 2}: {str(e)}")  # Debug log
                 continue
         
-        db.session.commit()
-        print(f"Upload completed. Success: {success_count}, Errors: {error_count}")  # Debug log
-        
         response_message = f'Successfully imported {success_count} records'
         if error_count > 0:
             response_message += f', {error_count} errors occurred'
+            success_count = 0
+        else:
+            db.session.commit()
         
         return jsonify({
             'message': response_message,

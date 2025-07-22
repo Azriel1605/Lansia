@@ -208,6 +208,7 @@ function DataTableContent() {
         const data = await response.json()
         setSelectedLansia(data)
         setIsDetailOpen(true)
+        console.log("Detail ", isEditOpen)
       }
     } catch (error) {
       console.error("Error fetching detailed data:", error)
@@ -222,6 +223,7 @@ function DataTableContent() {
         const data = await response.json()
         setEditingLansia(data)
         setIsEditOpen(true)
+        console.log("Edit", isEditOpen)
       }
     } catch (error) {
       console.error("Error fetching edit data:", error)

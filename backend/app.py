@@ -22,9 +22,10 @@ app.register_blueprint(api, url_prefix='/api')
 
 # Initialize database and create default users
 with app.app_context():
+    db.create_all()
+    
     users = db.session.query(User).all()
     if not users:
-        db.create_all()
         admin = User(
             username='admin', 
             email='admin@example.com', 

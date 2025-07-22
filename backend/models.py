@@ -50,9 +50,12 @@ class Lansia(db.Model):
     
     @hybrid_property
     def usia(self, reference=datetime.today()):
-        return reference.year - self.tanggal_lahir.year - (
-            (reference.month, reference.day) < (self.tanggal_lahir.month, self.tanggal_lahir.day)
-        )
+        try:
+            return reference.year - self.tanggal_lahir.year - (
+                (reference.month, reference.day) < (self.tanggal_lahir.month, self.tanggal_lahir.day)
+            )
+        except:
+            return '-'
 
     @usia.expression
     def usia(cls, reference=func.now()):
@@ -119,9 +122,12 @@ class KeluargaPendamping(db.Model):
     
     @hybrid_property
     def usia(self, reference=datetime.today()):
-        return reference.year - self.tanggal_lahir_pendamping.year - (
-            (reference.month, reference.day) < (self.tanggal_lahir.month_pendampingtanggal_lahir_pendamping, self.tanggal_lahir.day_pendampingtanggal_lahir_pendamping)
-        )
+        try:
+            return reference.year - self.tanggal_lahir_pendamping.year - (
+                (reference.month, reference.day) < (self.tanggal_lahir_pendamping.month, self.tanggal_lahir_pendamping.day)
+            )
+        except:
+            return '-'
 
     @usia.expression
     def usia(cls, reference=func.now()):
