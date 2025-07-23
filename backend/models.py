@@ -62,8 +62,8 @@ class Lansia(db.Model):
         return extract('year', func.age(reference, cls.tanggal_lahir))
     
     @hybrid_property
-    def kelompokUsia(self):
-        usia = self.usia
+    def kelompokUsia(self, reference=datetime.today()):
+        usia = self.usia(reference=reference)
         if usia < 60:
             return 'Belum Lansia'
         elif 60 <= usia < 70:
@@ -74,8 +74,8 @@ class Lansia(db.Model):
             return 'Lansia Tua'
         
     @kelompokUsia.expression
-    def kelompokUsia(cls):
-        usia_expr = cls.usia
+    def kelompokUsia(cls, reference=func.now()):
+        usia_expr = cls.usia(reference=reference)
         return case(
                 (usia_expr < 60, 'Belum Lansia'),
                 ((usia_expr >= 60) & (usia_expr < 70), 'Lansia Muda'),
@@ -166,7 +166,6 @@ class ADailyLiving(db.Model):
     
     def calculateCategory(self):
         points = self.calculate_total()
-        print(points)
         if points <5:return "Ketergantungan Total"
         if points <9:return "Ketergantungan Berat"
         if points <12:return "Ketergantungan Sedang"

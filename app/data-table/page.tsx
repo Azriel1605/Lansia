@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { DatePicker } from "@/components/dateselector"
 import {
   Search,
   Filter,
@@ -113,6 +114,7 @@ function DataTableContent() {
   const [genderFilter, setGenderFilter] = useState("all")
   const [ageGroupFilter, setAgeGroupFilter] = useState("all")
   const [rwFilter, setRwFilter] = useState("all")
+  const [selectedDate, setSelectedDate] = useState(new Date())
 
   // Sorting
   const [sortBy, setSortBy] = useState("nama_lengkap")
@@ -139,7 +141,7 @@ function DataTableContent() {
       setCurrentPage(1)
       fetchData()
     }
-  }, [searchDebounce, genderFilter, ageGroupFilter, rwFilter, sortBy, sortOrder])
+  }, [searchDebounce, selectedDate, genderFilter, ageGroupFilter, rwFilter, sortBy, sortOrder])
 
   useEffect(() => {
     if (!isInitialLoading) {
@@ -180,6 +182,7 @@ function DataTableContent() {
     try {
       const filters = {
         search: searchDebounce,
+        date: selectedDate.toISOString().slice(0, 10) ,
         gender: genderFilter === "all" ? "" : genderFilter,
         age_group: ageGroupFilter === "all" ? "" : ageGroupFilter,
         rw: rwFilter === "all" ? "" : rwFilter,
@@ -253,6 +256,7 @@ function DataTableContent() {
 
   const clearFilters = () => {
     setSearchTerm("")
+    setSelectedDate(new Date())
     setGenderFilter("all")
     setAgeGroupFilter("all")
     setRwFilter("all")
@@ -456,19 +460,8 @@ function DataTableContent() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Select value={genderFilter} onValueChange={setGenderFilter}>
-                    <SelectTrigger className="w-full sm:w-40">
-                      <SelectValue placeholder="Jenis Kelamin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua</SelectItem>
-                      {filterOptions.genders.map((gender) => (
-                        <SelectItem key={gender} value={gender}>
-                          {gender}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <DatePicker date={selectedDate} onChange={(date: Date) => setSelectedDate(date)} />
+
                   <Select value={genderFilter} onValueChange={setGenderFilter}>
                     <SelectTrigger className="w-full sm:w-40">
                       <SelectValue placeholder="Jenis Kelamin" />

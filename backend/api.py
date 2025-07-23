@@ -152,12 +152,16 @@ def get_lansia():
     per_page = request.args.get('per_page', 10, type=int)
     search = request.args.get('search', '', type=str)
     gender_filter = request.args.get('gender', '', type=str)
-    # age_group_filter = request.args.get('age_group', '', type=str)
     age_group_filter = request.args.get('age_group', '', type=str)
     rw_filter = request.args.get('rw', '', type=str)
     sort_by = request.args.get('sort_by', 'nama_lengkap', type=str)
     sort_order = request.args.get('sort_order', 'asc', type=str)
+    dateReference = request.args.get('date', '')
     
+    print("date", dateReference)
+    query = Lansia.query.first()
+    print(datetime.strptime(dateReference, '%Y-%m-%d').date())
+    # print(query.usia(reference=datetime.strptime(dateReference, '%Y-%m-%d').date()))
     # Build query
     query = dataQuery()
     
@@ -179,6 +183,8 @@ def get_lansia():
 
     if rw_filter:
         query = query.filter(Lansia.rw == rw_filter)
+    
+    
     
     # Apply sorting
     valid_sort_columns = ['nama_lengkap', 'nik', 'usia', 'jenis_kelamin', 'rt', 'rw']
