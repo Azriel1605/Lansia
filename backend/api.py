@@ -9,11 +9,46 @@ import os
 import secrets
 from sqlalchemy.dialects.postgresql import ARRAY  # Pastikan ini di-import
 from error import error_d
+import random
+from shapely.geometry import shape, Point
+import geopandas as gpd
 # from seed import generate_fake_data
 
 from models import db, User, PasswordResetToken, Lansia, KesehatanLansia, KesejahteraanSosial, KeluargaPendamping, ADailyLiving
 
 api = Blueprint('api', __name__)
+
+def dataQuery():
+    if 'role' not in session:
+        raise PermissionError("Role not found in session")
+
+    role = session['role']
+    query = Lansia.query
+
+    if role in ['kelurahan', 'admin', 'superadmin']:
+        return query
+
+    try:
+        return query.filter_by(rw=role)
+    except ValueError:
+        raise ValueError("Invalid role for rw filtering")
+    
+def load_rw_polygons(geojson_path):
+    gdf = gpd.read_file(geojson_path)
+    polygons = {}
+    for _, row in gdf.iterrows():
+        rw = str(row.get("rw") or row.get("properties", {}).get("rw") or row.get("name"))
+        if rw:
+            polygons[rw] = row.geometry
+    return polygons
+    
+def generate_random_point_in_polygon(polygon):
+    minx, miny, maxx, maxy = polygon.bounds
+    for _ in range(1000):  # max 1000 attempts
+        p = Point(random.uniform(minx, maxx), random.uniform(miny, maxy))
+        if polygon.contains(p):
+            return p
+    return None
 
 # Helper function to check if user is logged in
 def login_required(f):
@@ -44,7 +79,6 @@ def login():
     user = User.query.filter_by(username=username).first()
     
     if user and check_password_hash(user.password_hash, password):
-        print("User has input the correct password")
         session.permanent = True
         session['user_id'] = user.id
         session['username'] = user.username
@@ -125,7 +159,7 @@ def get_lansia():
     sort_order = request.args.get('sort_order', 'asc', type=str)
     
     # Build query
-    query = Lansia.query
+    query = dataQuery()
     
     # Apply search filter
     if search:
@@ -170,8 +204,9 @@ def get_lansia():
             'rt': l.rt,
             'rw': l.rw,
             'kelompok_usia': l.kelompokUsia,
-            'alamat_lengkap': l.alamat_lengkap,
+            'nilai_adl': l.daily_living.calculateCategory(),
             'status_perkawinan': l.status_perkawinan,
+            'koordinat':l.koordinat,
         } for l in lansia_list.items],
         'total': lansia_list.total,
         'pages': lansia_list.pages,
@@ -183,9 +218,6 @@ def get_lansia():
 @login_required
 def create_lansia():
     data = request.get_json()
-    for key, value in data.items():
-        print(key, value)    
-            
     try:
         # Check if NIK already exists
         existing = Lansia.query.filter_by(nik=str(data['nik'])).first()
@@ -219,10 +251,10 @@ def create_lansia():
                 kondisi_kesehatan_umum=data.get('kondisi_kesehatan_umum'),
                 riwayat_penyakit_kronis=data.get('riwayat_penyakit_kronis', []),
                 penggunaan_obat_rutin=data.get('penggunaan_obat_rutin'),
-                alat_bantu=data.get('alat_bantu'),
+                alat_bantu=data.get('alat_bantu', []),
                 aktivitas_fisik=data.get('aktivitas_fisik'),
                 status_gizi=data.get('status_gizi'),
-                riwayat_imunisasi=data.get('riwayat_imunisasi')
+                riwayat_imunisasi=data.get('riwayat_imunisasi', [])
             )
             db.session.add(kesehatan)
         
@@ -287,6 +319,7 @@ def get_lansia_detail(lansia_id):
     keluarga = lansia.keluarga
     daily_living = lansia.daily_living
     
+    
     return jsonify({
         'id': lansia.id,
         'nama_lengkap': lansia.nama_lengkap,
@@ -296,6 +329,7 @@ def get_lansia_detail(lansia_id):
         'usia': lansia.usia,
         'kelompok_usia': lansia.kelompokUsia,
         'alamat_lengkap': lansia.alamat_lengkap,
+        'koordinat':lansia.koordinat,
         'rt': lansia.rt,
         'rw': lansia.rw,
         'status_perkawinan': lansia.status_perkawinan,
@@ -307,7 +341,7 @@ def get_lansia_detail(lansia_id):
             'kondisi_kesehatan_umum': kesehatan.kondisi_kesehatan_umum if kesehatan else None,
             'riwayat_penyakit_kronis': kesehatan.riwayat_penyakit_kronis if kesehatan else [],
             'penggunaan_obat_rutin': kesehatan.penggunaan_obat_rutin if kesehatan else None,
-            'alat_bantu': kesehatan.alat_bantu.split(',') if kesehatan and kesehatan.alat_bantu else [],
+            'alat_bantu': kesehatan.alat_bantu if kesehatan and kesehatan.alat_bantu else [],
             'aktivitas_fisik': kesehatan.aktivitas_fisik if kesehatan else None,
             'status_gizi': kesehatan.status_gizi if kesehatan else None,
             'riwayat_imunisasi': kesehatan.riwayat_imunisasi if kesehatan else None,
@@ -322,11 +356,13 @@ def get_lansia_detail(lansia_id):
         'keluarga': {
             'nama_pendamping': keluarga.nama_pendamping if keluarga else None,
             'hubungan_dengan_lansia': keluarga.hubungan_dengan_lansia if keluarga else None,
-            'usia_pendamping': keluarga.usia if keluarga else None,
+            'tanggal_lahir_pendamping': keluarga.tanggal_lahir_pendamping.isoformat() if keluarga.tanggal_lahir_pendamping else None,
+            'usia': keluarga.usia,
             'pendidikan_pendamping': keluarga.pendidikan_pendamping if keluarga else None,
             'ketersediaan_waktu': keluarga.ketersediaan_waktu if keluarga else None,
             'partisipasi_program_bkl': keluarga.partisipasi_program_bkl if keluarga else None,
             'riwayat_partisipasi_bkl': keluarga.riwayat_partisipasi_bkl if keluarga else None,
+            'keterlibatan_data': keluarga.keterlibatan_data if keluarga else None,
         } if keluarga else None,
         'daily_living': {
             'bab': daily_living.bab if daily_living else None,
@@ -347,60 +383,76 @@ def get_lansia_detail(lansia_id):
 def update_lansia(lansia_id):
     lansia = Lansia.query.get_or_404(lansia_id)
     data = request.get_json()
-    print(data)
+    
+    # for key, value in data.items():
+        # print(key, value)
+    
+    if any(value == None for value in data.values()):
+        return jsonify({'message': f'Error: Terdapat data yang kosong'}), 400
     
     try:
-        # Update main lansia record
-        for key, value in data.items():
-            if hasattr(lansia, key) and key != 'id':
-                if key == 'tanggal_lahir' and value:
-                    setattr(lansia, key, datetime.strptime(value, '%Y-%m-%d').date())
-                else:
-                    setattr(lansia, key, value)
-        
-                
-        # Update health record
-        if any(data.get(key) for key in ['kondisi_kesehatan_umum', 'riwayat_penyakit_kronis', 'status_gizi']):
-            kesehatan = lansia.kesehatan
-            if not kesehatan:
-                kesehatan = KesehatanLansia(lansia_id=lansia.id)
-                db.session.add(kesehatan)
+        # data['tanggal_lahir'] = datetime.strptime(data['tanggal_lahir'], '%Y-%m-%d').date()
+        # data['tanggal_lahir'] = datetime.strptime(data['tanggal_lahir'], '%Y-%m-%d').date()
             
-            kesehatan.kondisi_kesehatan_umum = data.get('kondisi_kesehatan_umum')
-            kesehatan.riwayat_penyakit_kronis = data.get('riwayat_penyakit_kronis', [])
-            kesehatan.penggunaan_obat_rutin = data.get('penggunaan_obat_rutin')
-            kesehatan.alat_bantu = ','.join(data.get('alat_bantu', []))
-            kesehatan.aktivitas_fisik = data.get('aktivitas_fisik')
-            kesehatan.status_gizi = data.get('status_gizi')
-            kesehatan.riwayat_imunisasi = data.get('riwayat_imunisasi')
+        # Update main lansia record
+        lansia.nama_lengkap = data.get('nama_lengkap')
+        lansia.nik = data.get('nik')
+        lansia.jenis_kelamin = data.get('jenis_kelamin')
+        lansia.tanggal_lahir = data.get('tanggal_lahir')
+        lansia.alamat_lengkap = data.get('alamat_lengkap')
+        lansia.koordinat = data.get('koordinat')
+        lansia.rt = data.get('rt')
+        lansia.rw = data.get('rw')
+        lansia.status_perkawinan = data.get('status_perkawinan')
+        lansia.agama = data.get('agama')
+        lansia.pendidikan_terakhir = data.get('pendidikan_terakhir')
+        lansia.pekerjaan_terakhir = data.get('pekerjaan_terakhir')
+        lansia.sumber_penghasilan = data.get('sumber_penghasilan')
+        
+        
+        # Update health record
+        nestedData = data.get('kesehatan')
+        kesehatan = lansia.kesehatan
+        if not kesehatan:
+            kesehatan = KesehatanLansia(lansia_id=lansia.id)
+            db.session.add(kesehatan)
+        
+        kesehatan.kondisi_kesehatan_umum = nestedData.get('kondisi_kesehatan_umum')
+        kesehatan.riwayat_penyakit_kronis = nestedData.get('riwayat_penyakit_kronis', [])
+        kesehatan.penggunaan_obat_rutin = nestedData.get('penggunaan_obat_rutin')
+        kesehatan.alat_bantu = nestedData.get('alat_bantu', [])
+        kesehatan.aktivitas_fisik = nestedData.get('aktivitas_fisik')
+        kesehatan.status_gizi = nestedData.get('status_gizi')
+        kesehatan.riwayat_imunisasi = nestedData.get('riwayat_imunisasi', [])
         
         # Update social welfare record
-        if any(data.get(key) for key in ['dukungan_keluarga', 'kondisi_rumah', 'kebutuhan_mendesak']):
-            kesejahteraan = lansia.kesejahteraan
-            if not kesejahteraan:
-                kesejahteraan = KesejahteraanSosial(lansia_id=lansia.id)
-                db.session.add(kesejahteraan)
-            
-            kesejahteraan.dukungan_keluarga = data.get('dukungan_keluarga')
-            kesejahteraan.kondisi_rumah = data.get('kondisi_rumah')
-            kesejahteraan.kebutuhan_mendesak = data.get('kebutuhan_mendesak', [])
-            kesejahteraan.hobi_minat = data.get('hobi_minat')
-            kesejahteraan.kondisi_psikologis = data.get('kondisi_psikologis')
+        nestedData = data.get('kesejahteraan')
+        kesejahteraan = lansia.kesejahteraan
+        if not kesejahteraan:
+            kesejahteraan = KesejahteraanSosial(lansia_id=lansia.id)
+            db.session.add(kesejahteraan)
+        
+        kesejahteraan.dukungan_keluarga = nestedData.get('dukungan_keluarga')
+        kesejahteraan.kondisi_rumah = nestedData.get('kondisi_rumah')
+        kesejahteraan.kebutuhan_mendesak = nestedData.get('kebutuhan_mendesak', [])
+        kesejahteraan.hobi_minat = nestedData.get('hobi_minat')
+        kesejahteraan.kondisi_psikologis = nestedData.get('kondisi_psikologis')
         
         # Update family record
-        if data.get('nama_pendamping'):
-            keluarga = lansia.keluarga
-            if not keluarga:
-                keluarga = KeluargaPendamping(lansia_id=lansia.id)
-                db.session.add(keluarga)
-            
-            keluarga.nama_pendamping = data.get('nama_pendamping')
-            keluarga.hubungan_dengan_lansia = data.get('hubungan_dengan_lansia')
-            keluarga.usia_pendamping = int(data.get('usia_pendamping')) if data.get('usia_pendamping') else None
-            keluarga.pendidikan_pendamping = data.get('pendidikan_pendamping')
-            keluarga.ketersediaan_waktu = data.get('ketersediaan_waktu')
-            keluarga.partisipasi_program_bkl = data.get('keterlibatan_kelompok')
-            keluarga.riwayat_partisipasi_bkl = data.get('riwayat_partisipasi')
+        nestedData = data.get('keluarga')
+        keluarga = lansia.keluarga
+        if not keluarga:
+            keluarga = KeluargaPendamping(lansia_id=lansia.id)
+            db.session.add(keluarga)
+        
+        keluarga.nama_pendamping = nestedData.get('nama_pendamping')
+        keluarga.hubungan_dengan_lansia = nestedData.get('hubungan_dengan_lansia')
+        keluarga.tanggal_lahir_pendamping = nestedData.get('tanggal_lahir_pendamping') if nestedData.get('tanggal_lahir_pendamping') else None
+        keluarga.pendidikan_pendamping = nestedData.get('pendidikan_pendamping')
+        keluarga.ketersediaan_waktu = nestedData.get('ketersediaan_waktu')
+        keluarga.partisipasi_program_bkl = nestedData.get('partisipasi_program_bkl')
+        keluarga.riwayat_partisipasi_bkl = nestedData.get('riwayat_partisipasi_bkl')
+        keluarga.keterlibatan_data = nestedData.get('keterlibatan_data')
         
         db.session.commit()
         return jsonify({'message': 'Data lansia berhasil diperbarui', 'id': lansia.id})
@@ -427,24 +479,31 @@ def delete_lansia(lansia_id):
 @api.route('/dashboard/demographics', methods=['GET'])
 @login_required
 def get_demographics():
-    total_lansia = Lansia.query.count()
-    
-    gender_stats = db.session.query(
+    query = dataQuery()  # Pastikan query ini mengembalikan Lansia.query.filter_by(...) sesuai role
+
+    # Total lansia (terfilter sesuai role)
+    total_lansia = query.count()
+
+    # Statistik jenis kelamin
+    gender_stats = query.with_entities(
         Lansia.jenis_kelamin,
         func.count(Lansia.id)
     ).group_by(Lansia.jenis_kelamin).all()
-    
-    age_group_stats = db.session.query(
+
+    # Statistik kelompok usia
+    age_group_stats = query.with_entities(
         Lansia.kelompokUsia,
         func.count(Lansia.id)
     ).group_by(Lansia.kelompokUsia).all()
-    
-    location_stats = db.session.query(
+
+    # Statistik lokasi RT/RW
+    location_stats = query.with_entities(
         Lansia.rt,
         Lansia.rw,
         func.count(Lansia.id)
-    ).group_by(Lansia.rt, Lansia.rw).all()
-    
+    ).group_by(Lansia.rt, Lansia.rw).all()  # ← perbaikan: jangan group_by(rw, rw)
+
+        
     return jsonify({
         'total_lansia': total_lansia,
         'by_gender': [{'gender': g[0], 'count': g[1]} for g in gender_stats],
@@ -455,26 +514,38 @@ def get_demographics():
 @api.route('/dashboard/health', methods=['GET'])
 @login_required
 def get_health_stats():
+    # Ambil query Lansia yang sudah terfilter berdasarkan role
+    lansia_query = dataQuery()
+
+    # Ambil id lansia yang sesuai
+    filtered_ids = [l.id for l in lansia_query.with_entities(Lansia.id).all()]
+
+    # Query kondisi kesehatan umum
     health_condition_stats = db.session.query(
         KesehatanLansia.kondisi_kesehatan_umum,
         func.count(KesehatanLansia.id)
-    ).group_by(KesehatanLansia.kondisi_kesehatan_umum).all()
-    
-    # Chronic diseases query
+    ).filter(KesehatanLansia.lansia_id.in_(filtered_ids))\
+    .group_by(KesehatanLansia.kondisi_kesehatan_umum).all()
+
+    # Query penyakit kronis (dari array)
     chronic_diseases = db.session.execute(
         text("""
-        SELECT unnest(riwayat_penyakit_kronis) as disease, COUNT(*) as count
-        FROM kesehatan_lansia 
-        WHERE riwayat_penyakit_kronis IS NOT NULL
-        GROUP BY disease
-        ORDER BY count DESC
-        """)
+            SELECT unnest(riwayat_penyakit_kronis) AS disease, COUNT(*) as count
+            FROM kesehatan_lansia
+            WHERE lansia_id = ANY(:ids) AND riwayat_penyakit_kronis IS NOT NULL
+            GROUP BY disease
+            ORDER BY count DESC
+        """),
+        {'ids': filtered_ids}
     ).fetchall()
-    
+
+    # Query status gizi
     nutrition_stats = db.session.query(
         KesehatanLansia.status_gizi,
         func.count(KesehatanLansia.id)
-    ).group_by(KesehatanLansia.status_gizi).all()
+    ).filter(KesehatanLansia.lansia_id.in_(filtered_ids))\
+    .group_by(KesehatanLansia.status_gizi).all()
+
     
     return jsonify({
         'health_conditions': [{'condition': h[0], 'count': h[1]} for h in health_condition_stats if h[0]],
@@ -485,19 +556,30 @@ def get_health_stats():
 @api.route('/dashboard/social-welfare', methods=['GET'])
 @login_required
 def get_social_welfare_stats():
+    # Ambil lansia yang sudah difilter berdasarkan session role
+    lansia_query = dataQuery()
+
+    # Ambil ID lansia yang berhak dilihat
+    filtered_ids = [l.id for l in lansia_query.with_entities(Lansia.id).all()]
+
+    # Statistik kondisi rumah (terfilter)
     housing_stats = db.session.query(
         KesejahteraanSosial.kondisi_rumah,
         func.count(KesejahteraanSosial.id)
-    ).group_by(KesejahteraanSosial.kondisi_rumah).all()
-    
+    ).filter(KesejahteraanSosial.lansia_id.in_(filtered_ids))\
+    .group_by(KesejahteraanSosial.kondisi_rumah).all()
+
+    # Statistik kebutuhan mendesak (array field)
     urgent_needs = db.session.execute(
         text("""
-        SELECT unnest(kebutuhan_mendesak) as need, COUNT(*) as count
-        FROM kesejahteraan_sosial 
-        WHERE kebutuhan_mendesak IS NOT NULL
-        GROUP BY need
-        ORDER BY count DESC
-        """)
+            SELECT unnest(kebutuhan_mendesak) AS need, COUNT(*) as count
+            FROM kesejahteraan_sosial
+            WHERE lansia_id = ANY(:ids)
+            AND kebutuhan_mendesak IS NOT NULL
+            GROUP BY need
+            ORDER BY count DESC
+        """),
+        {'ids': filtered_ids}
     ).fetchall()
     
     return jsonify({
@@ -508,10 +590,19 @@ def get_social_welfare_stats():
 @api.route('/dashboard/needs-potential', methods=['GET'])
 @login_required
 def get_needs_potential():
+    # Ambil query Lansia yang terfilter berdasarkan session['role']
+    lansia_query = dataQuery()
+
+    # Ambil daftar ID lansia yang sesuai
+    filtered_ids = [l.id for l in lansia_query.with_entities(Lansia.id).all()]
+
+    # Query partisipasi program BKL yang hanya mencakup lansia yang diizinkan
     participation_stats = db.session.query(
         KeluargaPendamping.partisipasi_program_bkl,
         func.count(KeluargaPendamping.id)
-    ).group_by(KeluargaPendamping.partisipasi_program_bkl).all()
+    ).filter(KeluargaPendamping.lansia_id.in_(filtered_ids))\
+    .group_by(KeluargaPendamping.partisipasi_program_bkl).all()
+
     
     return jsonify({
         'participation': [{'group': p[0], 'count': p[1]} for p in participation_stats if p[0]]
@@ -524,7 +615,7 @@ def get_urgent_need_details(need_type):
     try:
         # Query to get lansia with specific urgent need using PostgreSQL array contains operator
         query = (
-                Lansia.query
+                dataQuery()
                 .join(KesejahteraanSosial)
                 .filter(KesejahteraanSosial.kebutuhan_mendesak.contains([need_type]))
                 .with_entities(
@@ -650,9 +741,9 @@ def upload_excel():
                 kesehatan = KesehatanLansia()
                 for column in KesehatanLansia.__table__.columns:
                     col_name = column.name
-                    if col_name == 'riwayat_penyakit_kronis':
+                    if col_name in ['riwayat_penyakit_kronis', 'alat_bantu', 'riwayat_imunisasi']:
                         setattr(kesehatan, col_name, data[col_name].split(sep=','))
-                        continue                
+                        continue             
                     
                     if col_name != 'id' and col_name != 'lansia_id' and col_name in data:
                         setattr(kesehatan, col_name, data[col_name])
@@ -728,9 +819,17 @@ def upload_excel():
 @login_required
 def get_filter_options():
     # Get unique values for filters
-    genders = db.session.query(Lansia.jenis_kelamin).distinct().all()
+    query = dataQuery()  # terfilter sesuai session['role']
+
+    # Jenis kelamin unik dari lansia yang berhak diakses
+    genders = query.with_entities(Lansia.jenis_kelamin).distinct().all()
+
+    # Kelompok usia tetap manual (bukan query)
     age_groups = ["Lansia Muda", "Lansia Madya", "Lansia Tua", "Belum Lansia"]
-    rws = db.session.query(Lansia.rw).distinct().order_by(Lansia.rw).all()
+
+    # RW unik dari lansia yang berhak diakses
+    rws = query.with_entities(Lansia.rw).distinct().order_by(Lansia.rw).all()
+
     
     return jsonify({
         'genders': [g[0] for g in genders if g[0]],
@@ -739,17 +838,42 @@ def get_filter_options():
     })
     
 # Get filter options for frontend
-@api.route('/density-map', methods=['GET'])
-def get_density_map_data():
-    # # Get data for density map
-    # data = {f'RW{i}': 10*i for i in range(1, 13)}
-    data = {f'RW{i}': 0 for i in range(1, 13)}
+@api.route('/lansia-locations', methods=['GET'])
+def get_lansia_locations():
+    data = Lansia.query.all()
+    result = []
+    RW_POLYGONS = load_rw_polygons("../public/data/rw_cipamokolan.geojson")
     
-    for i in range(1, 13):
-        count = Lansia.query.filter(Lansia.rw == f'{i}'.zfill(2)).count()
-        data[f'RW{i}'] = count
-    
-    return jsonify(data)
+    for person in data:
+        rw = str(person.rw).upper()
+        koordinat = getattr(person, "koordinat", "-")
+        lat, lon = None, None
+        if koordinat != '-':
+            lat, lon = koordinat.split(sep=',')
+
+        if lat == None or lon == None:
+            polygon = RW_POLYGONS.get(f'RW{rw}')
+            if polygon:
+                point = generate_random_point_in_polygon(polygon)
+                if point:
+                    lat, lon = point.y, point.x  # lat, lon
+                else:
+                    continue  # skip if failed to generate
+            else:
+                polygon = RW_POLYGONS.get('CIPAMOKOLAN')
+                point = generate_random_point_in_polygon(polygon)
+                if point:
+                    lat, lon = point.y, point.x  # lat, lon
+                else:
+                    continue  # skip if failed to generate
+
+        result.append({
+            "latitude": float(lat),
+            "longitude": float(lon)
+        })
+
+    return jsonify(result)
+
 
 #BULk delete lansia
 @api.route('/lansia/bulk-delete', methods=['POST'])

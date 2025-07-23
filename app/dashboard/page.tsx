@@ -22,6 +22,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { dataAPI } from "@/lib/api"
 import RouteGuard from "@/components/route-guard"
+import RWMap from "@/components/map"
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
 
@@ -208,7 +209,7 @@ function DashboardContent() {
                 </CardContent>
               </Card>
 
-              <Card>
+              {/* <Card>
                 <CardHeader>
                   <CardTitle>Sebaran per RT/RW</CardTitle>
                   <CardDescription>Konsentrasi lansia di setiap wilayah</CardDescription>
@@ -228,6 +229,9 @@ function DashboardContent() {
                     ))}
                   </div>
                 </CardContent>
+              </Card> */}
+              <Card>
+                <RWMap />
               </Card>
             </div>
           </TabsContent>

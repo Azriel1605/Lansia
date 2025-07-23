@@ -14,6 +14,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FileUp, UserPlus, Upload, Download } from "lucide-react"
 import { dataAPI } from "@/lib/api"
+import {genderOptions, perkawinanOptions, agamaOptions, pendidikanOptions,
+        pekerjaanOptions, penghasilanOptions, kesehatanOptions, penyakitOptions,
+        obatOptions, alatBantuOptions, aktivitasOptions, giziOptions, imunisasiOptions,
+        dukunganOptions, rumahOptions, kebutuhanMendesakOptions, hobiOptions,
+        psikologisOptions, dataBKLOptions, riwayatBKLOptions, keterlibatanDanaOptions,
+        adlOptions, adlGetOptions, hubunganOptions, ketersediaanWaktuOptions} from "@/lib/options"
+        
 import RouteGuard from "@/components/route-guard"
 
 function InputDataContent() {
@@ -261,236 +268,6 @@ function InputDataContent() {
     })
   }
 
-  const genderOptions = [
-    "Laki-laki",
-    "Perempuan",
-  ];
-
-  const perkawinanOptions = [
-    "Belum menikah",
-    "Menikah",
-    "Cerai Hidup",
-    "Cerai Mati",
-  ];
-  
-  const agamaOptions = [
-    "Islam",
-    "Kristen",
-    "Katolik",
-    "Hindu",
-    "Buddha",
-    "Konghucu",
-  ];
-
-  const pendidikanOptions = [
-    "Belum sekolah",
-    "SD",
-    "SMP",
-    "SMA",
-    "S1",
-    "S2",
-    "S3",
-    "Putus sekolah",
-  ];
-
-  const pekerjaanOptions = [
-    "Belum bekerja",
-    "Buruh harian lepas",
-    "Pedagang",
-    "Wiraswasta",
-    "Pegawai swasta/honorer",
-    "PNS/BUMN",
-    "TNI/Polri",
-    "Pensiunan",
-    "Mengurus rumah tangga",
-  ];
-
-  const penghasilanOptions = [
-    "Anak",
-    "Pasangan",
-    "Pensiun",
-    "Bantuan Pemerintah",
-    "Usaha Sendiri",
-    "Tabungan Pribadi",
-    "Lembaga Sosial",
-    "Kerja Paruh Waktu",
-    "Sumbangan Masyarakat",
-    "Tidak Ada",
-  ];
-
-  const kesehatanOptions = [
-    "Sehat",
-    "Sakit Ringan",
-    "Sakit Menahun",
-    "Disabilitas Fisik",
-    "Disabilitas Mental",
-    "Dalam Perawatan",
-    "Lemah Fisik",
-  ];
-
-  const penyakitOptions = [
-    "Hipertensi",
-    "Diabetes",
-    "Asma",
-    "Jantung",
-    "Stroke",
-    "Arthritis",
-    "Kanker",
-    "TBC",
-    "Lainnya",
-  ];
-
-  const obatOptions = [
-    "Resep Dokter",
-    "Obat Warung",
-    "Kadang-kadang",
-    "Tidak Menggunakan Obat",
-  ];
-
-  const alatBantuOptions = [
-    "Kacamata",
-    "Tongkat",
-    "Kursi Roda",
-    "Alat Bantu Dengar",
-    "Gigi Palsu",
-    "Lainnya",
-    "Tidak Menggunakan",
-  ];
-
-  const aktivitasOptions = [
-    "Setiap Hari",
-    "Beberapa Kali Seminggu",
-    "Jarang",
-    "Tidak Pernah",
-  ];
-
-  const giziOptions = [
-    "Normal",
-    "Kurus",
-    "Kurus Sekali",
-    "Gemuk",
-    "Obesitas",
-  ];
-  
-  const imunisasiOptions = [
-    "Influenza",
-    "Pneumokokus (PCV)",
-    "Covid-19",
-    "Tetanus",
-    "Hepatitis B",
-    "Belum Pernah",
-  ];
-
-  const dukunganOptions = [
-    "Sangat Mendukung",
-    "Mendukung",
-    "Cukup Mendukung",
-    "Tidak Mendukung",
-    "Tidak Ada Dukungan",
-  ];
-
-  const rumahOptions = [
-    "Layak Huni",
-    "Cukup Layak",
-    "Tidak Layak",
-    "Menumpang",
-    "Tinggal Sendiri",
-    "Tinggal Bersama Keluarga",
-  ];
-
-  const kebutuhanMendesakOptions = [
-    "Tempat Tinggal",
-    "Makanan Pokok",
-    "Obat-obatan",
-    "Pakaian",
-    "Pendampingan",
-    "Alat Bantu Jalan",
-    "Perawatan Kesehatan",
-    "Tidak Ada",
-  ];
-
-  const hobiOptions = [
-    "Bercocok Tanam",
-    "Membaca",
-    "Menjahit",
-    "Menonton TV",
-    "Ibadah",
-    "Berkumpul dengan Teman",
-    "Olahraga Ringan",
-    "Kerajinan Tangan",
-    "Tidak Ada",
-  ];
-
-  const psikologisOptions = [
-    "Bahagia",
-    "Cemas",
-    "Depresi",
-    "Sering Marah",
-    "Kesepian",
-    "Sulit Tidur",
-    "Labil Emosi",
-  ];
-
-  const dataBKLOptions = [
-    "Aktif",
-    "Pernah Aktif",
-    "Tidak Pernah",
-    "Belum Tahu Program BKL",
-  ];
-
-  const riwayatBKLOptions = [
-    "Penyuluhan",
-    "Senam Lansia",
-    "Pelatihan Keluarga",
-    "Kunjungan Rumah",
-    "Pembinaan Kesehatan",
-    "Tidak Pernah",
-  ];
-
-  const keterlibatanDanaOptions = [
-    "Aktif Mengelola Dana",
-    "Menerima Manfaat Dana",
-    "Pernah Terlibat",
-    "Tidak Pernah Terlibat",
-    "Tidak Tahu Ada Dana",
-  ];
-
-  const adlOptions = [
-  { key: "bab", label: "BAB (Buang Air Besar)" },
-  { key: "bak", label: "BAK (Buang Air Kecil)" },
-  { key: "membersihkan_diri", label: "Membersihkan Diri" },
-  { key: "toilet", label: "Menggunakan Toilet" },
-  { key: "makan", label: "Makan" },
-  { key: "pindah_tempat", label: "Pindah Tempat" },
-  { key: "mobilitas", label: "Mobilitas" },
-  { key: "berpakaian", label: "Berpakaian" },
-  { key: "naik_turun_tangga", label: "Naik Turun Tangga" },
-  { key: "mandi", label: "Mandi" },
-];
-
-const adlGetOptions = (key: string) => {
-  if (["mobilitas", "pindah_tempat"].includes(key)) {
-    return [
-      { value: "0", label: "0 - Tidak Mampu" },
-      { value: "1", label: "1 - Butuh Bantuan" },
-      { value: "2", label: "2 - Mandiri" },
-      { value: "3", label: "3 - Sangat Mandiri" },
-    ];
-  } else if (["mandi", "membersihkan_diri"].includes(key)) {
-    return [
-      { value: "0", label: "0 - Tidak Mampu" },
-      { value: "1", label: "1 - Mandiri" },
-    ];
-  } else {
-    return [
-      { value: "0", label: "0 - Tidak Mampu" },
-      { value: "1", label: "1 - Butuh Bantuan" },
-      { value: "2", label: "2 - Mandiri" },
-    ];
-  }
-};
-
-
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -718,46 +495,25 @@ const adlGetOptions = (key: string) => {
                   <CardDescription>Informasi kondisi kesehatan lansia</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="kondisi_kesehatan_umum">Kondisi Kesehatan Umum</Label>
-                    <Select
-                        value={formData.kondisi_kesehatan_umum}
-                        onValueChange={(value) => handleInputChange("kondisi_kesehatan_umum", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih Kondisi Kesehatan" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {kesehatanOptions.map((option) => (
-                          <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                  </div>
-
-                  <div>
-                    <Label>Riwayat Penyakit Kronis</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-                      {penyakitOptions.map((disease) => (
-                      <div key={disease} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={disease}
-                            checked={formData.riwayat_penyakit_kronis.includes(disease)}
-                            onCheckedChange={(checked) =>
-                              handleArrayChange("riwayat_penyakit_kronis", disease, checked as boolean)
-                            }
-                          />
-                          <Label htmlFor={disease} className="text-sm">
-                            {disease}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="kondisi_kesehatan_umum">Kondisi Kesehatan Umum</Label>
+                      <Select
+                          value={formData.kondisi_kesehatan_umum}
+                          onValueChange={(value) => handleInputChange("kondisi_kesehatan_umum", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih Kondisi Kesehatan" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {kesehatanOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                    </div>
                     <div>
                       <Label htmlFor="penggunaan_obat_rutin">Penggunaan Obat Rutin</Label>
                       <Select
@@ -772,24 +528,6 @@ const adlGetOptions = (key: string) => {
                           <SelectItem key={option} value={option}>
                               {option}
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="riwayat_imunisasi">Riwayat Imunisasi</Label>
-                      <Select
-                        value={formData.riwayat_imunisasi}
-                        onValueChange={(value) => handleInputChange("riwayat_imunisasi", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih Riwayat Imunisasi" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {imunisasiOptions.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -836,28 +574,63 @@ const adlGetOptions = (key: string) => {
                   </div>
 
                   <div>
-                    <Label htmlFor="alat_bantu">Alat Bantu yang Digunakan</Label>
-                    <Select
-                      value={formData.alat_bantu}
-                      onValueChange={(value) => handleInputChange("alat_bantu", value)}
-                      >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih Alat Bantu" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {alatBantuOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {/* <Input
-                      id="alat_bantu"
-                      value={formData.alat_bantu}
-                      onChange={(e) => handleInputChange("alat_bantu", e.target.value)}
-                      placeholder="Contoh: Tongkat, Kacamata"
-                    /> */}
+                    <Label>Riwayat Penyakit Kronis</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                      {penyakitOptions.map((disease) => (
+                      <div key={disease} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={disease}
+                            checked={formData.riwayat_penyakit_kronis.includes(disease)}
+                            onCheckedChange={(checked) =>
+                              handleArrayChange("riwayat_penyakit_kronis", disease, checked as boolean)
+                            }
+                          />
+                          <Label htmlFor={disease} className="text-sm">
+                            {disease}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Riwayat Imunisasi</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                      {imunisasiOptions.map((imunisasi) => (
+                      <div key={imunisasi} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={imunisasi}
+                            checked={formData.riwayat_imunisasi.includes(imunisasi)}
+                            onCheckedChange={(checked) =>
+                              handleArrayChange("riwayat_imunisasi", imunisasi, checked as boolean)
+                            }
+                          />
+                          <Label htmlFor={imunisasi} className="text-sm">
+                            {imunisasi}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Alat Bantu yang Digunakan</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                      {alatBantuOptions.map((alat) => (
+                      <div key={alat} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={alat}
+                            checked={formData.alat_bantu.includes(alat)}
+                            onCheckedChange={(checked) =>
+                              handleArrayChange("alat_bantu", alat, checked as boolean)
+                            }
+                          />
+                          <Label htmlFor={alat} className="text-sm">
+                            {alat}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -996,13 +769,11 @@ const adlGetOptions = (key: string) => {
                           <SelectValue placeholder="Pilih hubungan" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Anak">Anak</SelectItem>
-                          <SelectItem value="Cucu">Cucu</SelectItem>
-                          <SelectItem value="Menantu">Menantu</SelectItem>
-                          <SelectItem value="Pasangan">Pasangan</SelectItem>
-                          <SelectItem value="Saudara">Saudara</SelectItem>
-                          <SelectItem value="Tetangga">Tetangga</SelectItem>
-                          <SelectItem value="Lainnya">Lainnya</SelectItem>
+                          {hubunganOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1028,14 +799,11 @@ const adlGetOptions = (key: string) => {
                           <SelectValue placeholder="Pilih pendidikan" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Tidak Sekolah">Tidak Sekolah</SelectItem>
-                          <SelectItem value="SD">SD</SelectItem>
-                          <SelectItem value="SMP">SMP</SelectItem>
-                          <SelectItem value="SMA">SMA</SelectItem>
-                          <SelectItem value="D3">D3</SelectItem>
-                          <SelectItem value="S1">S1</SelectItem>
-                          <SelectItem value="S2">S2</SelectItem>
-                          <SelectItem value="S3">S3</SelectItem>
+                          {pendidikanOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1049,12 +817,11 @@ const adlGetOptions = (key: string) => {
                           <SelectValue placeholder="Pilih ketersediaan waktu" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Sepanjang hari">Sepanjang hari</SelectItem>
-                          <SelectItem value="Pagi hari">Pagi hari</SelectItem>
-                          <SelectItem value="Siang hari">Siang hari</SelectItem>
-                          <SelectItem value="Sore hari">Sore hari</SelectItem>
-                          <SelectItem value="Malam hari">Malam hari</SelectItem>
-                          <SelectItem value="Akhir pekan">Akhir pekan</SelectItem>
+                          {ketersediaanWaktuOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

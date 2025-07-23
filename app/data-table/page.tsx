@@ -33,6 +33,12 @@ import {
   X,
 } from "lucide-react"
 import { dataAPI } from "@/lib/api"
+import {genderOptions, perkawinanOptions, agamaOptions, pendidikanOptions,
+        pekerjaanOptions, penghasilanOptions, kesehatanOptions, penyakitOptions,
+        obatOptions, alatBantuOptions, aktivitasOptions, giziOptions, imunisasiOptions,
+        dukunganOptions, rumahOptions, kebutuhanMendesakOptions, hobiOptions,
+        psikologisOptions, dataBKLOptions, riwayatBKLOptions, keterlibatanDanaOptions,
+        adlOptions, adlGetOptions, hubunganOptions, ketersediaanWaktuOptions} from "@/lib/options"
 import RouteGuard from "@/components/route-guard"
 
 interface LansiaData {
@@ -44,7 +50,7 @@ interface LansiaData {
   rt: string
   rw: string
   kelompok_usia: string
-  alamat_lengkap: string
+  nilai_adl: string
   status_perkawinan: string
   created_at: string
 }
@@ -56,6 +62,7 @@ interface LansiaDetail {
   jenis_kelamin: string
   tanggal_lahir: string
   usia: number
+  koordinat: string
   kelompok_usia: string
   alamat_lengkap: string
   rt: string
@@ -208,7 +215,6 @@ function DataTableContent() {
         const data = await response.json()
         setSelectedLansia(data)
         setIsDetailOpen(true)
-        console.log("Detail ", isEditOpen)
       }
     } catch (error) {
       console.error("Error fetching detailed data:", error)
@@ -358,6 +364,27 @@ function DataTableContent() {
     })
   }
 
+  const handleEditArrayChange = (
+  section: string,
+  field: string,
+  value: string,
+  checked: boolean
+) => {
+  if (!editingLansia) return;
+
+  const currentArray = editingLansia[section as keyof LansiaDetail]?.[field] || [];
+  const trimmedValue = value.trim();
+
+  const updatedArray = checked
+    ? [...currentArray.map((v: string) => v.trim()), trimmedValue]
+        .filter((v, i, arr) => arr.indexOf(v) === i) // remove duplicates
+    : currentArray.filter((v: string) => v.trim() !== trimmedValue);
+
+  handleEditNestedChange(section, field, updatedArray);
+};
+
+
+
   const TableSkeleton = () => (
     <div className="space-y-3">
       {[...Array(perPage)].map((_, i) => (
@@ -429,6 +456,19 @@ function DataTableContent() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <Select value={genderFilter} onValueChange={setGenderFilter}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="Jenis Kelamin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua</SelectItem>
+                      {filterOptions.genders.map((gender) => (
+                        <SelectItem key={gender} value={gender}>
+                          {gender}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Select value={genderFilter} onValueChange={setGenderFilter}>
                     <SelectTrigger className="w-full sm:w-40">
                       <SelectValue placeholder="Jenis Kelamin" />
@@ -540,7 +580,7 @@ function DataTableContent() {
                             {getSortIcon("rw")}
                           </Button>
                         </th>
-                        <th className="text-left p-4">Alamat</th>
+                        <th className="text-left p-4">Nilai ADL</th>
                         <th className="text-center p-4">Aksi</th>
                       </tr>
                     </thead>
@@ -564,7 +604,7 @@ function DataTableContent() {
                           <td className="p-4">
                             RT {lansia.rt} / RW {lansia.rw}
                           </td>
-                          <td className="p-4 max-w-xs truncate">{lansia.alamat_lengkap}</td>
+                          <td className="p-4 max-w-xs truncate">{lansia.nilai_adl}</td>
                           <td className="p-4">
                             <div className="flex items-center gap-2">
                               <Button variant="outline" size="sm" onClick={() => fetchDetailedData(lansia.id)}>
@@ -642,8 +682,8 @@ function DataTableContent() {
                       </div>
 
                       <div className="mb-3">
-                        <span className="text-gray-500 text-sm">Alamat:</span>
-                        <p className="text-sm">{lansia.alamat_lengkap}</p>
+                        <span className="text-gray-500 text-sm">Nilai ADL:</span>
+                        <p className="text-sm">{lansia.nilai_adl}</p>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -799,6 +839,14 @@ function DataTableContent() {
                       <Label className="font-semibold">Pendidikan Terakhir</Label>
                       <p className="text-sm text-gray-600">{selectedLansia.pendidikan_terakhir || "-"}</p>
                     </div>
+                    <div>
+                      <Label className="font-semibold">Sumber Penghasilan</Label>
+                      <p className="text-sm text-gray-600">{selectedLansia.sumber_penghasilan || "-"}</p>
+                    </div>
+                    <div>
+                      <Label className="font-semibold">Koordinat</Label>
+                      <p className="text-sm text-gray-600">{selectedLansia.koordinat || "-"}</p>
+                    </div>
                   </div>
                 </TabsContent>
 
@@ -843,9 +891,27 @@ function DataTableContent() {
                           )}
                         </div>
                       </div>
+                      <div className="col-span-2">
+                        <Label className="font-semibold">Riwayat Imunisasi</Label>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {selectedLansia.kesehatan.riwayat_imunisasi?.length > 0 ? (
+                            selectedLansia.kesehatan.riwayat_imunisasi.map((imunisasi: string, index: number) => (
+                              <Badge key={index} variant="secondary">
+                                {imunisasi}
+                              </Badge>
+                            ))
+                          ) : (
+                            <p className="text-sm text-gray-600">Tidak ada</p>
+                          )}
+                        </div>
+                      </div>
                       <div>
                         <Label className="font-semibold">Aktivitas Fisik</Label>
                         <p className="text-sm text-gray-600">{selectedLansia.kesehatan.aktivitas_fisik || "-"}</p>
+                      </div>
+                      <div>
+                        <Label className="font-semibold">Penggunaan Obat Rutin</Label>
+                        <p className="text-sm text-gray-600">{selectedLansia.kesehatan.penggunaan_obat_rutin || "-"}</p>
                       </div>
                     </div>
                   ) : (
@@ -908,8 +974,8 @@ function DataTableContent() {
                       <div>
                         <Label className="font-semibold">Usia Pendamping</Label>
                         <p className="text-sm text-gray-600">
-                          {selectedLansia.keluarga.usia_pendamping
-                            ? `${selectedLansia.keluarga.usia_pendamping} tahun`
+                          {selectedLansia.keluarga.usia
+                            ? `${selectedLansia.keluarga.usia} tahun`
                             : "-"}
                         </p>
                       </div>
@@ -1000,8 +1066,11 @@ function DataTableContent() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Laki-laki">Laki-laki</SelectItem>
-                          <SelectItem value="Perempuan">Perempuan</SelectItem>
+                          {genderOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1012,6 +1081,15 @@ function DataTableContent() {
                         type="date"
                         value={editingLansia.tanggal_lahir}
                         onChange={(e) => handleEditChange("tanggal_lahir", e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="edit-address">Koordinat</Label>
+                      <Input
+                        id="edit-koordinat"
+                        value={editingLansia.koordinat}
+                        placeholder="Contoh: -6.946822, 107.675628"
+                        onChange={(e) => handleEditChange("koordinat", e.target.value)}
                       />
                     </div>
                     <div className="col-span-2">
@@ -1048,10 +1126,11 @@ function DataTableContent() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Menikah">Menikah</SelectItem>
-                          <SelectItem value="Janda">Janda</SelectItem>
-                          <SelectItem value="Duda">Duda</SelectItem>
-                          <SelectItem value="Belum Menikah">Belum Menikah</SelectItem>
+                          {perkawinanOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1062,12 +1141,11 @@ function DataTableContent() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Islam">Islam</SelectItem>
-                          <SelectItem value="Kristen">Kristen</SelectItem>
-                          <SelectItem value="Katolik">Katolik</SelectItem>
-                          <SelectItem value="Hindu">Hindu</SelectItem>
-                          <SelectItem value="Buddha">Buddha</SelectItem>
-                          <SelectItem value="Konghucu">Konghucu</SelectItem>
+                          {agamaOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1086,10 +1164,11 @@ function DataTableContent() {
                           <SelectValue placeholder="Pilih kondisi kesehatan" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Sehat bugar">Sehat bugar</SelectItem>
-                          <SelectItem value="Mandiri">Mandiri</SelectItem>
-                          <SelectItem value="Membutuhkan bantuan sebagian">Membutuhkan bantuan sebagian</SelectItem>
-                          <SelectItem value="Ketergantungan total">Ketergantungan total</SelectItem>
+                          {kesehatanOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1103,39 +1182,130 @@ function DataTableContent() {
                           <SelectValue placeholder="Pilih status gizi" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Normal">Normal</SelectItem>
-                          <SelectItem value="Kurus">Kurus</SelectItem>
-                          <SelectItem value="Gemuk">Gemuk</SelectItem>
-                          <SelectItem value="Obesitas">Obesitas</SelectItem>
+                          {giziOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-2">
+                    <div>
                       <Label htmlFor="edit-medication">Penggunaan Obat Rutin</Label>
-                      <Textarea
-                        id="edit-medication"
+                      <Select
                         value={editingLansia.kesehatan?.penggunaan_obat_rutin || ""}
-                        onChange={(e) => handleEditNestedChange("kesehatan", "penggunaan_obat_rutin", e.target.value)}
-                        placeholder="Contoh: Amlodipine 5mg 1x sehari"
-                      />
+                        onValueChange={(value) => handleEditNestedChange("kesehatan", "penggunaan_obat_rutin", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih Penggunaan Obat Rutin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {obatOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="edit-activity">Aktivitas Fisik</Label>
-                      <Input
-                        id="edit-activity"
+                      <Select
                         value={editingLansia.kesehatan?.aktivitas_fisik || ""}
-                        onChange={(e) => handleEditNestedChange("kesehatan", "aktivitas_fisik", e.target.value)}
-                        placeholder="Contoh: Jalan pagi 3x seminggu"
-                      />
+                        onValueChange={(value) => handleEditNestedChange("kesehatan", "aktivitas_fisik", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih Aktivitas Fisik" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {aktivitasOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div>
-                      <Label htmlFor="edit-immunization">Riwayat Imunisasi</Label>
-                      <Input
-                        id="edit-immunization"
-                        value={editingLansia.kesehatan?.riwayat_imunisasi || ""}
-                        onChange={(e) => handleEditNestedChange("kesehatan", "riwayat_imunisasi", e.target.value)}
-                        placeholder="Contoh: Flu 2023, Pneumonia 2022"
-                      />
+                    
+                    <div className="col-span-2">
+                      <Label>Riwayat Imunisasi</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                        {imunisasiOptions.map((item) => (
+                          <div key={item} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`edit-${item}`}
+                              checked={
+                                Array.isArray(editingLansia.kesehatan?.riwayat_imunisasi)
+                                  ? editingLansia.kesehatan.riwayat_imunisasi
+                                      .map((val: string) => val.trim())
+                                      .includes(item.trim())
+                                  : false
+                              }
+                              onCheckedChange={(checked) =>
+                                handleEditArrayChange("kesehatan", "riwayat_imunisasi", item, checked as boolean)
+                              }
+                            />
+
+                            <Label htmlFor={`edit-${item}`} className="text-sm">
+                              {item}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="col-span-2">
+                      <Label>Riwayat Penyakit Kronis</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                        {penyakitOptions.map((item) => (
+                          <div key={item} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`edit-${item}`}
+                              checked={
+                                Array.isArray(editingLansia.kesehatan?.riwayat_penyakit_kronis)
+                                  ? editingLansia.kesehatan.riwayat_penyakit_kronis
+                                      .map((val: string) => val.trim())
+                                      .includes(item.trim())
+                                  : false
+                              }
+                              onCheckedChange={(checked) =>
+                                handleEditArrayChange("kesehatan", "riwayat_penyakit_kronis", item, checked as boolean)
+                              }
+                            />
+
+                            <Label htmlFor={`edit-${item}`} className="text-sm">
+                              {item}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="col-span-2">
+                      <Label>Alat Bantu</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                        {alatBantuOptions.map((item) => (
+                          <div key={item} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`edit-${item}`}
+                              checked={
+                                Array.isArray(editingLansia.kesehatan?.alat_bantu)
+                                  ? editingLansia.kesehatan.alat_bantu
+                                      .map((val: string) => val.trim())
+                                      .includes(item.trim())
+                                  : false
+                              }
+                              onCheckedChange={(checked) =>
+                                handleEditArrayChange("kesehatan", "alat_bantu", item, checked as boolean)
+                              }
+                            />
+
+                            <Label htmlFor={`edit-${item}`} className="text-sm">
+                              {item}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </TabsContent>
@@ -1152,11 +1322,11 @@ function DataTableContent() {
                           <SelectValue placeholder="Pilih tingkat dukungan" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Sangat baik">Sangat baik</SelectItem>
-                          <SelectItem value="Baik">Baik</SelectItem>
-                          <SelectItem value="Cukup">Cukup</SelectItem>
-                          <SelectItem value="Kurang">Kurang</SelectItem>
-                          <SelectItem value="Tidak ada">Tidak ada</SelectItem>
+                          {dukunganOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1170,9 +1340,11 @@ function DataTableContent() {
                           <SelectValue placeholder="Pilih kondisi rumah" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Layak huni">Layak huni</SelectItem>
-                          <SelectItem value="Perlu perbaikan">Perlu perbaikan</SelectItem>
-                          <SelectItem value="Tidak layak huni">Tidak layak huni</SelectItem>
+                          {rumahOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1186,23 +1358,60 @@ function DataTableContent() {
                           <SelectValue placeholder="Pilih kondisi psikologis" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Sangat baik">Sangat baik</SelectItem>
-                          <SelectItem value="Baik">Baik</SelectItem>
-                          <SelectItem value="Stabil">Stabil</SelectItem>
-                          <SelectItem value="Cemas">Cemas</SelectItem>
-                          <SelectItem value="Depresi">Depresi</SelectItem>
+                          {psikologisOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
                       <Label htmlFor="edit-hobbies">Hobi & Minat</Label>
-                      <Textarea
-                        id="edit-hobbies"
+                      <Select
                         value={editingLansia.kesejahteraan?.hobi_minat || ""}
-                        onChange={(e) => handleEditNestedChange("kesejahteraan", "hobi_minat", e.target.value)}
-                        placeholder="Contoh: Berkebun, memasak, menonton TV"
-                      />
+                        onValueChange={(value) => handleEditNestedChange("kesejahteraan", "hobi_minat", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih Hobi/Minat" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {hobiOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
+
+                    <div className="col-span-2">
+                      <Label>Kebutuhan Mendesak</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                        {kebutuhanMendesakOptions.map((item) => (
+                          <div key={item} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`edit-${item}`}
+                              checked={
+                                Array.isArray(editingLansia.kesejahteraan?.kebutuhan_mendesak)
+                                  ? editingLansia.kesejahteraan.kebutuhan_mendesak
+                                      .map((val: string) => val.trim())
+                                      .includes(item.trim())
+                                  : false
+                              }
+                              onCheckedChange={(checked) =>
+                                handleEditArrayChange("kesejahteraan", "kebutuhan_mendesak", item, checked as boolean)
+                              }
+                            />
+
+                            <Label htmlFor={`edit-${item}`} className="text-sm">
+                              {item}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                   </div>
                 </TabsContent>
 
@@ -1226,25 +1435,21 @@ function DataTableContent() {
                           <SelectValue placeholder="Pilih hubungan" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Anak">Anak</SelectItem>
-                          <SelectItem value="Cucu">Cucu</SelectItem>
-                          <SelectItem value="Menantu">Menantu</SelectItem>
-                          <SelectItem value="Pasangan">Pasangan</SelectItem>
-                          <SelectItem value="Saudara">Saudara</SelectItem>
-                          <SelectItem value="Tetangga">Tetangga</SelectItem>
-                          <SelectItem value="Lainnya">Lainnya</SelectItem>
+                          {hubunganOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="edit-caregiver-age">Usia Pendamping</Label>
+                      <Label htmlFor="edit-birth">Tanggal Lahir</Label>
                       <Input
-                        id="edit-caregiver-age"
-                        type="number"
-                        value={editingLansia.keluarga?.usia_pendamping || ""}
-                        onChange={(e) => handleEditNestedChange("keluarga", "usia_pendamping", e.target.value)}
-                        min="0"
-                        max="120"
+                        id="edit-birth"
+                        type="date"
+                        value={editingLansia.keluarga?.tanggal_lahir_pendamping || editingLansia.tanggal_lahir}
+                        onChange={(e) => handleEditNestedChange("keluarga", "tanggal_lahir_pendamping", e.target.value)}
                       />
                     </div>
                     <div>
@@ -1257,14 +1462,11 @@ function DataTableContent() {
                           <SelectValue placeholder="Pilih pendidikan" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Tidak Sekolah">Tidak Sekolah</SelectItem>
-                          <SelectItem value="SD">SD</SelectItem>
-                          <SelectItem value="SMP">SMP</SelectItem>
-                          <SelectItem value="SMA">SMA</SelectItem>
-                          <SelectItem value="D3">D3</SelectItem>
-                          <SelectItem value="S1">S1</SelectItem>
-                          <SelectItem value="S2">S2</SelectItem>
-                          <SelectItem value="S3">S3</SelectItem>
+                          {pendidikanOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1278,12 +1480,11 @@ function DataTableContent() {
                           <SelectValue placeholder="Pilih ketersediaan waktu" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Sepanjang hari">Sepanjang hari</SelectItem>
-                          <SelectItem value="Pagi hari">Pagi hari</SelectItem>
-                          <SelectItem value="Siang hari">Siang hari</SelectItem>
-                          <SelectItem value="Sore hari">Sore hari</SelectItem>
-                          <SelectItem value="Malam hari">Malam hari</SelectItem>
-                          <SelectItem value="Akhir pekan">Akhir pekan</SelectItem>
+                          {ketersediaanWaktuOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1301,6 +1502,15 @@ function DataTableContent() {
                         id="edit-bkl-history"
                         value={editingLansia.keluarga?.riwayat_partisipasi_bkl || ""}
                         onChange={(e) => handleEditNestedChange("keluarga", "riwayat_partisipasi_bkl", e.target.value)}
+                        placeholder="Contoh: Aktif sejak 2020, pernah menjadi ketua kelompok"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="edit-bkl-history">Keterlibatan Data</Label>
+                      <Textarea
+                        id="edit-bkl-history"
+                        value={editingLansia.keluarga?.keterlibatan_data || ""}
+                        onChange={(e) => handleEditNestedChange("keluarga", "keterlibatan_data", e.target.value)}
                         placeholder="Contoh: Aktif sejak 2020, pernah menjadi ketua kelompok"
                       />
                     </div>

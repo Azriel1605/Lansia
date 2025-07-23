@@ -8,3 +8,6 @@ sqlalchemy
 psycopg2
 faker
 openpyxl
+shapely
+geopandas
+watchdog

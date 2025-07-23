@@ -92,10 +92,10 @@ class KesehatanLansia(db.Model):
     kondisi_kesehatan_umum = db.Column(db.String(100))
     riwayat_penyakit_kronis = db.Column(ARRAY(String))
     penggunaan_obat_rutin = db.Column(db.Text)
-    alat_bantu = db.Column(db.String)
+    alat_bantu = db.Column(ARRAY(String))
     aktivitas_fisik = db.Column(db.String(100))
     status_gizi = db.Column(db.String(50))
-    riwayat_imunisasi = db.Column(db.Text)
+    riwayat_imunisasi = db.Column(ARRAY(String))
 
 class KesejahteraanSosial(db.Model):
     __tablename__ = 'kesejahteraan_sosial'
@@ -126,7 +126,7 @@ class KeluargaPendamping(db.Model):
             return reference.year - self.tanggal_lahir_pendamping.year - (
                 (reference.month, reference.day) < (self.tanggal_lahir_pendamping.month, self.tanggal_lahir_pendamping.day)
             )
-        except:
+        except Exception as e:
             return '-'
 
     @usia.expression
@@ -163,3 +163,13 @@ class ADailyLiving(db.Model):
             (self.mandi or 0)
         )
         return self.total
+    
+    def calculateCategory(self):
+        points = self.calculate_total()
+        print(points)
+        if points <5:return "Ketergantungan Total"
+        if points <9:return "Ketergantungan Berat"
+        if points <12:return "Ketergantungan Sedang"
+        if points <20:return "Ketergantungan Ringan"
+        if points <21:return "Mandiri"
+        return "Tidak Diketahui"
