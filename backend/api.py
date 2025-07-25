@@ -389,6 +389,7 @@ def create_lansia():
         adl = ADailyLiving(
             lansia_id=lansia.id,
             bab = data.get('bab'),
+            bak = data.get('bak'),
             membersihkan_diri = data.get('membersihkan_diri'),
             toilet = data.get('toilet'),
             makan = data.get('makan'),
@@ -397,8 +398,21 @@ def create_lansia():
             berpakaian = data.get('berpakaian'),
             naik_turun_tangga = data.get('naik_turun_tangga'),
             mandi = data.get('mandi'),
-            total = data.get('total'),
         )
+        
+        print(data.get('bab'))
+        print(data.get('membersihkan_diri'))
+        print(data.get('toilet'))
+        print(data.get('makan'))
+        print(data.get('pindah_tempat'))
+        print(data.get('mobilitas'))
+        print(data.get('berpakaian'))
+        print(data.get('naik_turun_tangga'))
+        print(data.get('mandi'))
+        
+        db.session.add(adl)
+        
+        print(adl)
         
         adl.calculate_total()
         
