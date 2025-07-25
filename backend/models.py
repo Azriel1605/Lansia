@@ -48,7 +48,6 @@ class Lansia(db.Model):
     keluarga = db.relationship('KeluargaPendamping', backref='lansia', uselist=False, cascade='all, delete-orphan')
     daily_living = db.relationship('ADailyLiving', backref='lansia', uselist=False, cascade='all, delete-orphan')
     
-    @hybrid_property
     def usia(self, reference=datetime.today()):
         try:
             return reference.year - self.tanggal_lahir.year - (
@@ -56,11 +55,18 @@ class Lansia(db.Model):
             )
         except:
             return '-'
+        
+    def kelompokUsiaReference(self, reference=datetime.today()):
+        usia = self.usia(reference=reference)
+        if usia < 60:
+            return 'Belum Lansia'
+        elif 60 <= usia < 70:
+            return 'Lansia Muda'
+        elif 70 <= usia < 80:
+            return 'Lansia Madya'
+        else:
+            return 'Lansia Tua'
 
-    @usia.expression
-    def usia(cls, reference=func.now()):
-        return extract('year', func.age(reference, cls.tanggal_lahir))
-    
     @hybrid_property
     def kelompokUsia(self, reference=datetime.today()):
         usia = self.usia(reference=reference)
@@ -75,7 +81,7 @@ class Lansia(db.Model):
         
     @kelompokUsia.expression
     def kelompokUsia(cls, reference=func.now()):
-        usia_expr = cls.usia(reference=reference)
+        usia_expr = extract('year', func.age(reference, cls.tanggal_lahir))
         return case(
                 (usia_expr < 60, 'Belum Lansia'),
                 ((usia_expr >= 60) & (usia_expr < 70), 'Lansia Muda'),

@@ -5,8 +5,7 @@ from dotenv import load_dotenv
 class Config:
     # Database
     
-    # SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://user:password@localhost/lansia_db')
-    SQLALCHEMY_DATABASE_URI = 'postgresql://keyopptta:Ra_sy6a7e2@localhost/lansia_db'
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://keyopptta:Ra_sy6a7e2@localhost/lansia_db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     print(SQLALCHEMY_DATABASE_URI)
@@ -16,8 +15,16 @@ class Config:
     SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
     
+    # Konfigurasi Gmail SMTP
+    MAIL_SERVER = 'smtp.gmail.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USERNAME = 'keyapkeyop@gmail.com'         # Email kamu
+    MAIL_PASSWORD = 'nind plrl oikp rveu'          # App password dari Google
+    MAIL_DEFAULT_SENDER = 'keyapkeyop@gmail.com'
+    
     # CORS
-    CORS_ORIGINS = ["http://localhost:3000"]
+    CORS_ORIGINS = [os.getenv("FRONTEND_URL", "http://localhost:3000")]
     CORS_SUPPORTS_CREDENTIALS = True
 
 class DevelopmentConfig(Config):

@@ -4,6 +4,7 @@ from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
 from config import Config
 from models import db, User
+from flask_mail import Mail, Message
 # from seed import db
 from api import api
 
@@ -13,6 +14,7 @@ app.config.from_object(Config)
 # Initialize extensions
 db.init_app(app)
 bcrypt = Bcrypt(app)
+mail = Mail(app)
 CORS(app, origins=app.config['CORS_ORIGINS'], supports_credentials=app.config['CORS_SUPPORTS_CREDENTIALS'])
 
 migrate = Migrate(app, db)

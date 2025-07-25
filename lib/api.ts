@@ -49,10 +49,20 @@ export const authAPI = {
 
   resetPassword: (token: string, password: string) =>
     apiCall("/api/reset-password", {
-      method: "POST",
+      method: "PUT",
+      headers: {
+      "Content-Type": "application/json" // ⬅️ tambahkan ini
+    },
       body: JSON.stringify({ token, password }),
     }),
-}
+
+  // resetPassword: (token: string, newPassword: string) =>
+  //   apiCall(`/api/forgot-password/${encodeURIComponent(token)}`,{
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({ password: newPassword })
+  //   }),
+  }
 
 export const dataAPI = {
   getLansia: (page = 1, perPage = 10, filters = {}) => {
@@ -99,5 +109,5 @@ export const dataAPI = {
     apiCall(`/api/dashboard/urgent-need-details/${encodeURIComponent(needType)}`),
 
   exportTemplate: () => apiCall("/api/export-template"),
-  uploadExcel: () => apiCall("api/upload-excel")
+  uploadExcel: () => apiCall("api/upload-excel"),
 }
