@@ -48,13 +48,16 @@ class Lansia(db.Model):
     keluarga = db.relationship('KeluargaPendamping', backref='lansia', uselist=False, cascade='all, delete-orphan')
     daily_living = db.relationship('ADailyLiving', backref='lansia', uselist=False, cascade='all, delete-orphan')
     
-    def usia(self, reference=datetime.today()):
+    def usia(self, reference=datetime.today().strftime('%Y-%m-%d')):
         try:
+            print(reference, "On MODEL LANSIA")
+            reference = datetime.strptime(reference, '%Y-%m-%d').date()
             return reference.year - self.tanggal_lahir.year - (
                 (reference.month, reference.day) < (self.tanggal_lahir.month, self.tanggal_lahir.day)
             )
-        except:
-            return '-'
+        except Exception as e:
+            print(e)
+            return 404
         
     def kelompokUsiaReference(self, reference=datetime.today()):
         usia = self.usia(reference=reference)
@@ -126,18 +129,15 @@ class KeluargaPendamping(db.Model):
     riwayat_partisipasi_bkl = db.Column(db.Text)
     keterlibatan_data = db.Column(db.Text)
     
-    @hybrid_property
-    def usia(self, reference=datetime.today()):
+    def usia(self, reference=datetime.today().strftime('%Y-%m-%d')):
         try:
+            reference = datetime.strptime(reference, '%Y-%m-%d').date()
             return reference.year - self.tanggal_lahir_pendamping.year - (
                 (reference.month, reference.day) < (self.tanggal_lahir_pendamping.month, self.tanggal_lahir_pendamping.day)
             )
         except Exception as e:
+            print(e, "pendamping")
             return '-'
-
-    @usia.expression
-    def usia(cls, reference=func.now()):
-        return extract('year', func.age(reference, cls.tanggal_lahir_pendamping))
 
 class ADailyLiving(db.Model):
     __tablename__ = 'daily_living'

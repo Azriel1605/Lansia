@@ -254,7 +254,7 @@ def get_lansia():
     sort_by = request.args.get('sort_by', 'nama_lengkap', type=str)
     sort_order = request.args.get('sort_order', 'asc', type=str)
     dateReference = request.args.get('date', '')
-    session['dateReference'] = datetime.strptime(dateReference, '%Y-%m-%d').date()
+    session['dateReference'] = dateReference
     
     query = Lansia.query.first()
     # Build query
@@ -433,7 +433,6 @@ def get_lansia_detail(lansia_id):
     kesejahteraan = lansia.kesejahteraan
     keluarga = lansia.keluarga
     daily_living = lansia.daily_living
-    
     
     return jsonify({
         'id': lansia.id,
